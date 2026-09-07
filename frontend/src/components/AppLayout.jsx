@@ -1,0 +1,3 @@
+import { NavLink, Outlet } from 'react-router-dom'
+const menus = [{ to: '/', label: '홈', icon: '⌂', end: true }, { to: '/leagues', label: '리그', icon: '◈' }, { to: '/members', label: '회원', icon: '♙' }, { to: '/admin', label: '관리자', icon: '⚙' }]
+export default function AppLayout() { return <div className="app-shell"><header className="app-header"><NavLink className="brand" to="/"><b>A</b> 어른이농구</NavLink><span className="badge">v1.0 prototype</span></header><main className="page-content"><Outlet /></main><nav className="bottom-nav" aria-label="주 메뉴">{menus.map((menu) => <NavLink key={menu.to} to={menu.to} end={menu.end} className={({ isActive }) => `nav ${isActive ? 'active' : ''}`}><span>{menu.icon}</span>{menu.label}</NavLink>)}</nav></div> }

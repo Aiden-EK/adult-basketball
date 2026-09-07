@@ -1,0 +1,7 @@
+import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import PageTitle from '../../components/PageTitle'
+import { ErrorMessage, Loading } from '../../components/Status'
+import { getLeague } from '../../services/leagueApi'
+const tabs = [['standings', '순위', '아직 순위 정보가 없습니다.'], ['games', '경기', '아직 등록된 경기 정보가 없습니다.'], ['participants', '참가자', '아직 참가자 정보가 없습니다.'], ['winner', '우승팀', '아직 우승팀 정보가 없습니다.']]
+export default function LeagueDetailPage() { const { id } = useParams(); const [league, setLeague] = useState(null); const [tab, setTab] = useState('standings'); const [error, setError] = useState(''); useEffect(() => { getLeague(id).then(setLeague).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id]); return <><PageTitle eyebrow="LEAGUE DETAIL" title={league?.name || '리그 상세'} back />{error ? <ErrorMessage text={error} /> : !league ? <Loading /> : <><div className="details card"><div className="row"><span>연도</span><b>{league.year}년</b></div><div className="row"><span>분기</span><b>{league.quarter}분기</b></div><div className="row"><span>상태</span><b>{league.status}</b></div></div><div className="tabs">{tabs.map(([key, label]) => <button className={tab === key ? 'selected' : ''} key={key} onClick={() => setTab(key)}>{label}</button>)}</div><div className="empty card"><span>🏀</span><h3>{tabs.find(([key]) => key === tab)[2]}</h3><p className="muted">관련 API가 준비되면 이 화면에서 확인할 수 있어요.</p></div></>}</> }
