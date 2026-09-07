@@ -7,14 +7,15 @@ require('dotenv').config({
 });
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT || 3000);
 
 const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
+  host: process.env.POSTGRES_HOST || 'localhost',
+  port: Number(process.env.POSTGRES_PORT || 5432),
   database: process.env.POSTGRES_DB,
   user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD
+  password: process.env.POSTGRES_PASSWORD,
+  connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS || 5000)
 });
 
 app.use(express.json());
@@ -23,28 +24,29 @@ app.get('/', (req, res) => {
   res.send('Adult Basketball Backend is running!');
 });
 
-app.get('/api/db-test', async (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT current_database() AS database, NOW() AS time'
-    );
+    await pool.query('SELECT 1');
 
     res.json({
-      success: true,
-      message: 'PostgreSQL connection successful!',
-      database: result.rows[0].database,
-      time: result.rows[0].time
+      status: 'UP',
+      database: 'UP'
     });
   } catch (error) {
-    console.error(error);
+    console.error('Database health check failed:', error);
 
     res.status(500).json({
-      success: false,
-      message: 'PostgreSQL connection failed'
+      status: 'UP',
+      database: 'DOWN'
     });
   }
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
+});
+
+process.on('SIGTERM', async () => {
+  await pool.end();
+  server.close(() => process.exit(0));
 });
