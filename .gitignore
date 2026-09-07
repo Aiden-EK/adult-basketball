@@ -1,0 +1,22 @@
+# 환경변수 / 비밀번호
+.env
+.env.*
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Vite 빌드 결과
+frontend/dist/
+
+# 로그
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
