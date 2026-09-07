@@ -1,122 +1,27 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useState } from 'react'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+const API = import.meta.env.VITE_API_BASE_URL || '/api'
+async function api(path, options) {
+  const response = await fetch(`${API}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) { const error = new Error(data.message || '요청에 실패했습니다.'); error.status = response.status; throw error }
+  return data
 }
 
+function App() {
+  const [view, setView] = useState('home'); const [leagueId, setLeagueId] = useState(null); const [memberId, setMemberId] = useState(null)
+  const goLeague = (id) => { setLeagueId(id); setView('league-detail') }; const goMember = (id) => { setMemberId(id); setView('member-detail') }
+  return <div className="app-shell"><header className="app-header"><button className="brand" onClick={() => setView('home')}><b>A</b> 어른이농구</button><span className="badge">v1.0 prototype</span></header><main className="page-content">{view === 'home' && <Home goLeagues={() => setView('leagues')} />}{view === 'leagues' && <Leagues select={goLeague} />}{view === 'league-detail' && <LeagueDetail id={leagueId} back={() => setView('leagues')} />}{view === 'members' && <Members select={goMember} />}{view === 'member-detail' && <MemberDetail id={memberId} back={() => setView('members')} />}{view === 'admin' && <AdminLeagues goList={() => setView('leagues')} />}</main><nav className="bottom-nav"><Nav active={view === 'home'} label="홈" icon="⌂" click={() => setView('home')} /><Nav active={view.includes('league')} label="리그" icon="◈" click={() => setView('leagues')} /><Nav active={view.includes('member')} label="회원" icon="♙" click={() => setView('members')} /><Nav active={view === 'admin'} label="관리자" icon="⚙" click={() => setView('admin')} /></nav></div>
+}
+function Nav({ active, label, icon, click }) { return <button className={`nav ${active ? 'active' : ''}`} onClick={click}><span>{icon}</span>{label}</button> }
+function Title({ eyebrow, title, desc, back }) { return <div className="title">{back && <button className="back" onClick={back}>← 뒤로</button>}<small>{eyebrow}</small><h1>{title}</h1>{desc && <p className="muted">{desc}</p>}</div> }
+function Home({ goLeagues }) { const [current, setCurrent] = useState(null); useEffect(() => { api('/leagues').then((data) => setCurrent(data[0] || null)).catch(() => {}) }, []); return <><section className="hero"><small>BASKETBALL COMMUNITY</small><h1>코트 위의 순간을<br /><em>함께 기록해요.</em></h1><p>분기별 리그와 경기 기록을 한눈에 확인하는<br />어른이농구 스코어 앱입니다.</p></section><section><div className="section-head"><div><small>CURRENT LEAGUE</small><h2>현재 리그</h2></div><strong className="live">● LIVE</strong></div><div className="current card">{current ? <div><label>{current.year} · {current.quarter}분기</label><h3>{current.name}</h3><i>{current.status}</i></div> : <p className="muted">등록된 리그가 없습니다.</p>}<button className="round" onClick={goLeagues}>→</button></div><button className="primary full" onClick={goLeagues}>리그 전체 보기　→</button></section><section><div className="section-head"><div><small>QUICK VIEW</small><h2>빠른 메뉴</h2></div></div><div className="quick"><Feature icon="🏀" name="리그 순위" /><Feature icon="▣" name="경기 결과" /><Feature icon="♛" name="우승팀" /></div></section></> }
+function Feature({ icon, name }) { return <div className="feature card"><span>{icon}</span><b>{name}</b><small>준비 중</small></div> }
+function Leagues({ select }) { const [data, setData] = useState(null); const [error, setError] = useState(''); useEffect(() => { api('/leagues').then(setData).catch((e) => setError(e.message)) }, []); return <><Title eyebrow="LEAGUES" title="리그 목록" desc="지난 기록부터 현재 리그까지 확인하세요." />{error && <Error text={error} />}{data === null ? <Loading /> : data.length === 0 ? <Empty text="등록된 리그가 없습니다." /> : <div className="stack">{data.map((league) => <button className="league-card card" key={league.id} onClick={() => select(league.id)}><div><label>{league.year} · {league.quarter}분기</label><h3>{league.name}</h3><i>{league.status}</i></div><span className="round">→</span></button>)}</div>}</> }
+function LeagueDetail({ id, back }) { const [data, setData] = useState(null); const [error, setError] = useState(''); useEffect(() => { api(`/leagues/${id}`).then(setData).catch((e) => setError(e.message)) }, [id]); return <><Title eyebrow="LEAGUE DETAIL" title={data?.name || '리그 상세'} back={back} />{error ? <Error text={error} /> : !data ? <Loading /> : <><div className="details card"><Row name="연도" value={`${data.year}년`} /><Row name="분기" value={`${data.quarter}분기`} /><Row name="상태" value={data.status} /></div><div className="empty card"><span>🏀</span><h3>아직 등록된 경기 정보가 없습니다.</h3><p className="muted">경기일과 결과가 등록되면 이곳에서 확인할 수 있어요.</p></div></>}</> }
+function Members({ select }) { const [data, setData] = useState(null); const [error, setError] = useState(''); useEffect(() => { api('/admin/members').then(setData).catch((e) => setError(e.message)) }, []); return <><Title eyebrow="ADMIN · MEMBERS" title="회원정보" desc="관리자용 회원 목록입니다." />{error && <Error text={error} />}{data === null ? <Loading /> : <div className="stack">{data.map((member) => <button className="league-card card" key={member.id} onClick={() => select(member.id)}><div><h3>{member.name}</h3><p className="muted">{member.memberType === 'REGULAR' ? '정회원' : '게스트'} · {member.isActive ? '활성' : '비활성'}</p></div><span className="round">→</span></button>)}</div>}</> }
+function MemberDetail({ id, back }) { const [data, setData] = useState(null); const [note, setNote] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(''); useEffect(() => { api(`/admin/members/${id}`).then((value) => { setData(value); setNote(value.note || '') }).catch((e) => setError(e.message)) }, [id]); async function save(event) { event.preventDefault(); try { const value = await api(`/admin/members/${id}/note`, { method: 'PATCH', body: JSON.stringify({ note }) }); setNote(value.note || ''); setMessage('비고를 저장했습니다.'); setError('') } catch (e) { setError(e.message) } } return <><Title eyebrow="MEMBER DETAIL" title={data?.name || '회원 상세'} back={back} />{error && <Error text={error} />}{!data && !error ? <Loading /> : data && <><div className="details card"><Row name="회원등급" value={data.memberType === 'REGULAR' ? '정회원' : '게스트'} /><Row name="출생년도" value={data.birthYear ? `${data.birthYear}년` : '-'} /><Row name="키" value={data.height ? `${data.height}cm` : '-'} /><Row name="포지션" value={data.positions?.join(', ') || '-'} /></div><form className="form card" onSubmit={save}><label htmlFor="note">관리자 비고</label><textarea id="note" rows="4" value={note} onChange={(e) => setNote(e.target.value)} placeholder="관리자만 확인할 수 있는 메모" /><button className="primary full">비고 저장</button>{message && <p className="success">{message}</p>}</form></>}</> }
+function AdminLeagues({ goList }) { const [year, setYear] = useState(new Date().getFullYear()); const [quarter, setQuarter] = useState(1); const [name, setName] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(''); async function create(event) { event.preventDefault(); try { await api('/admin/leagues', { method: 'POST', body: JSON.stringify({ name, year: Number(year), quarter: Number(quarter) }) }); setMessage('리그를 생성했습니다.'); setName(''); setError('') } catch (e) { setError(e.status === 409 ? '이미 같은 연도와 분기의 리그가 존재합니다.' : e.message) } } return <><Title eyebrow="ADMIN · LEAGUES" title="리그 관리" desc="새 분기 리그를 등록합니다." /><form className="form card" onSubmit={create}><label htmlFor="year">연도</label><input id="year" type="number" min="2000" value={year} onChange={(e) => setYear(e.target.value)} /><label htmlFor="quarter">분기</label><select id="quarter" value={quarter} onChange={(e) => setQuarter(e.target.value)}><option value="1">1분기</option><option value="2">2분기</option><option value="3">3분기</option><option value="4">4분기</option></select><label htmlFor="league-name">리그명</label><input id="league-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 2026년 4분기 리그" required /><button className="primary full">리그 생성</button>{message && <p className="success">{message}</p>}{error && <Error text={error} />}</form><button className="secondary full" onClick={goList}>리그 목록 확인</button></> }
+function Row({ name, value }) { return <div className="row"><span>{name}</span><b>{value}</b></div> } function Loading() { return <div className="loading card">불러오는 중...</div> } function Empty({ text }) { return <div className="empty card"><h3>{text}</h3></div> } function Error({ text }) { return <div className="error">{text}</div> }
 export default App
