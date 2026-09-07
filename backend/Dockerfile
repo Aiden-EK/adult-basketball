@@ -5,7 +5,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY server.js ./
+COPY server.js db.js ./
+COPY routes ./routes
 
 EXPOSE 3000
 
