@@ -7,6 +7,8 @@ require('dotenv').config({
 
 const pool = require('./db');
 const adminMembersRouter = require('./routes/adminMembers');
+const leaguesRouter = require('./routes/leagues');
+const adminLeaguesRouter = require('./routes/adminLeagues');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -36,6 +38,8 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.use('/api/admin/members', adminMembersRouter);
+app.use('/api/leagues', leaguesRouter);
+app.use('/api/admin/leagues', adminLeaguesRouter);
 
 const server = app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
