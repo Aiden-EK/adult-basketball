@@ -22,3 +22,4 @@ logs/
 .DS_Store
 Thumbs.db
 scripts/auto-pull.log
+scripts/last-deployed.txt
