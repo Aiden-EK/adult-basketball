@@ -2,6 +2,10 @@
 .env
 .env.*
 !.env.example
+.cloudflared/
+cloudflared-credentials/
+*.pem
+*.key
 
 # Node.js
 node_modules/

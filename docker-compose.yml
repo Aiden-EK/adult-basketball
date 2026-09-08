@@ -39,8 +39,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PORT: 3000
       NODE_ENV: ${NODE_ENV:-production}
-      TRUST_PROXY: ${TRUST_PROXY:-false}
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       SESSION_COOKIE_SAME_SITE: ${SESSION_COOKIE_SAME_SITE:-strict}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
     ports:
@@ -56,6 +56,21 @@ services:
         condition: service_healthy
     ports:
       - "${FRONTEND_BIND_ADDRESS:-0.0.0.0}:${FRONTEND_PORT:-8080}:80"
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.8.3
+    container_name: adult-basketball-tunnel
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+    command: tunnel --no-autoupdate --protocol http2 --metrics 0.0.0.0:2000 --url http://frontend:80
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:2000", "ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   postgres_data:
