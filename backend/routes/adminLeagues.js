@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const { LeagueWinnerError, setLeagueWinner } = require('../services/leagueWinner');
 
 const router = express.Router();
 
@@ -117,6 +118,14 @@ router.patch('/:id', async (req, res) => {
   } finally {
     client.release();
   }
+});
+
+router.patch('/:leagueId/winner', async (req, res) => {
+  const leagueId=Number(req.params.leagueId), teamId=req.body?.teamId
+  if(!Number.isSafeInteger(leagueId)||leagueId<1)return res.status(400).json({message:'Invalid league id'})
+  if(!Number.isSafeInteger(teamId)||teamId<1)return res.status(400).json({message:'Invalid team id'})
+  const client=await pool.connect()
+  try{await client.query('BEGIN');const result=await setLeagueWinner(client,leagueId,teamId);await client.query('COMMIT');res.json(result)}catch(error){await client.query('ROLLBACK');if(error instanceof LeagueWinnerError)return res.status(error.status).json({message:error.message});console.error('League winner update failed:',error);res.status(500).json({message:'Database error'})}finally{client.release()}
 });
 
 module.exports = router;
