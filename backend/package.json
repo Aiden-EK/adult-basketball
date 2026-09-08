@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --check server.js && node tests/standings.test.js && node tests/playerStandings.test.js",
-    "test:player-scores": "node tests/playerScores.integration.test.js"
+    "test": "node --check server.js && node tests/standings.test.js && node tests/playerStandings.test.js && node tests/auth.test.js",
+    "test:player-scores": "node tests/playerScores.integration.test.js",
+    "test:auth": "node tests/auth.integration.test.js",
+    "setup:admin": "node scripts/setupAdmin.js"
   },
   "keywords": [],
   "author": "",

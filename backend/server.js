@@ -19,11 +19,14 @@ const leagueGamesRouter = require('./routes/leagueGames');
 const leagueStandingsRouter = require('./routes/leagueStandings');
 const playerScoresRouter = require('./routes/playerScores');
 const leaguePlayerStandingsRouter = require('./routes/leaguePlayerStandings');
+const authRouter = require('./routes/auth');
+const { loadUser, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
 
 app.use(express.json());
+app.use(loadUser);
 
 app.get('/', (req, res) => {
   res.send('Adult Basketball Backend is running!');
@@ -47,6 +50,8 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.use('/api/auth', authRouter);
+app.use('/api/admin', requireAdmin);
 app.use('/api/admin/members', adminMembersRouter);
 app.use('/api/members', membersRouter);
 app.use('/api/leagues', leaguesRouter);
