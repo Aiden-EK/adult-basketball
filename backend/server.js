@@ -23,6 +23,7 @@ const leaguePlayerStandingsRouter = require('./routes/leaguePlayerStandings');
 const authRouter = require('./routes/auth');
 const { loadUser, requireAdmin } = require('./middleware/auth');
 const leagueWinnerRouter = require('./routes/leagueWinner');
+const adminAttendanceRouter = require('./routes/adminAttendance');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -77,6 +78,7 @@ app.use('/api/leagues/:leagueId/standings', leagueStandingsRouter);
 app.use('/api/leagues/:leagueId/scorers', leaguePlayerStandingsRouter);
 app.use('/api/leagues/:leagueId/winner', leagueWinnerRouter);
 app.use('/api/admin/games', playerScoresRouter);
+app.use('/api/admin/games', adminAttendanceRouter);
 app.use('/api/games', playerScoresRouter);
 
 app.use('/api', (_req, res) => {

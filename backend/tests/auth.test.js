@@ -19,7 +19,7 @@ async function main() {
   let passed = false; requireAdmin({ user: { role: 'ADMIN' } }, response(), () => { passed = true }); assert.equal(passed, true);
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(server.indexOf("app.use('/api/admin', requireAdmin)") < server.indexOf("app.use('/api/admin/members'"));
-  assert.equal((server.match(/app\.use\('\/api\/admin(?!', requireAdmin)/g) || []).length, 6);
+  assert.equal((server.match(/app\.use\('\/api\/admin(?!', requireAdmin)/g) || []).length, 7);
   console.log('인증 단위 테스트 통과');
 }
 main().catch(error => { console.error(error); process.exitCode = 1 });
