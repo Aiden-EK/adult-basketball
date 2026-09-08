@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     if (!(await leagueExists(leagueId))) return res.status(404).json({ message: 'League not found' });
     const result = await pool.query(`
       SELECT m.id AS "memberId", m.name, m.grade AS "memberType", m.is_active AS "isActive",
-             (lm.id IS NOT NULL) AS "isParticipant", lm.id AS "participantId"
+             (lm.id IS NOT NULL) AS "isParticipant", lm.id AS "participantId", lm.team_id AS "teamId"
       FROM member m
       LEFT JOIN league_member lm ON lm.member_id = m.id AND lm.league_id = $1
       ORDER BY m.id
