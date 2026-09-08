@@ -1,16 +1,26 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true });
 const pool = require('../db');
-const { hashPassword } = require('../services/auth');
+const { hashPassword, validateAdminPassword } = require('../services/auth');
+const { readValue, readPassword } = require('./adminCli');
 
 async function main() {
-  const loginId = String(process.env.ADMIN_LOGIN_ID || '').trim();
-  const name = String(process.env.ADMIN_NAME || '').trim();
-  const password = process.env.ADMIN_PASSWORD;
-  if (!loginId || !name || typeof password !== 'string' || password.length < 10) throw new Error('ADMIN_LOGIN_ID, ADMIN_NAME, 10자 이상의 ADMIN_PASSWORD가 필요합니다.');
+  const loginId = await readValue('관리자 ID: ', 'ADMIN_LOGIN_ID');
+  const name = await readValue('관리자 이름: ', 'ADMIN_NAME');
+  const password = await readPassword('관리자 비밀번호: ', 'ADMIN_PASSWORD');
+  if (!loginId || !name) throw new Error('관리자 ID와 이름을 모두 입력해야 합니다.');
+  if (loginId.length > 100 || name.length > 100) throw new Error('관리자 ID와 이름은 각각 100자 이하여야 합니다.');
+  const passwordError = validateAdminPassword(password, loginId);
+  if (passwordError) throw new Error(passwordError);
+  const duplicate = await pool.query('SELECT 1 FROM admin_account WHERE login_id=$1', [loginId]);
+  if (duplicate.rowCount > 0) throw new Error('이미 존재하는 관리자 ID입니다. 비밀번호 변경 명령을 사용하세요.');
   const passwordHash = await hashPassword(password);
-  await pool.query(`INSERT INTO admin_account(login_id,name,password_hash,role) VALUES($1,$2,$3,'ADMIN')
-    ON CONFLICT(login_id) DO UPDATE SET name=EXCLUDED.name,password_hash=EXCLUDED.password_hash,role='ADMIN',is_active=TRUE,updated_at=CURRENT_TIMESTAMP`, [loginId, name, passwordHash]);
-  console.log('관리자 계정 설정이 완료되었습니다.');
+  try {
+    await pool.query("INSERT INTO admin_account(login_id,name,password_hash,role) VALUES($1,$2,$3,'ADMIN')", [loginId, name, passwordHash]);
+  } catch (error) {
+    if (error.code === '23505') throw new Error('이미 존재하는 관리자 ID입니다. 비밀번호 변경 명령을 사용하세요.');
+    throw error;
+  }
+  console.log('관리자 계정이 생성되었습니다.');
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; }).finally(() => pool.end());

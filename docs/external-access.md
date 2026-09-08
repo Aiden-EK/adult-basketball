@@ -1,5 +1,7 @@
 # 외부 HTTPS 운영 가이드
 
+관리자 계정, 백업·복구, 재기동과 장애 대응은 [운영 가이드](operations.md)를 함께 확인합니다.
+
 ## 네트워크 구조
 
 현재 외부 공개 경로는 다음과 같습니다.
@@ -87,13 +89,11 @@ Tunnel과 Nginx가 전달한 HTTPS 정보를 Express가 한 단계의 신뢰 프
 
 관리자 생성은 공개 API가 아니라 기존 로컬 CLI만 사용합니다.
 
-1. Git에서 제외된 루트 `.env`에 `ADMIN_LOGIN_ID`, `ADMIN_NAME`, `ADMIN_PASSWORD`를 임시로 입력합니다.
-2. 비밀번호는 10자 이상으로 만들고 다른 서비스에서 사용한 비밀번호를 재사용하지 않습니다.
-3. 프로젝트 루트에서 `npm --prefix backend run setup:admin`을 실행합니다.
-4. 성공을 확인한 직후 `.env`의 세 `ADMIN_` 항목을 삭제합니다. DB에는 scrypt hash만 저장됩니다.
-5. `.env`를 Git에 추가하거나 화면·로그로 공유하지 않습니다.
-
-이 명령은 같은 로그인 ID가 있으면 비밀번호를 갱신하므로 운영 PC에서만 신중하게 실행합니다.
+1. 프로젝트 루트에서 `docker compose exec backend npm run setup:admin`을 실행합니다.
+2. 관리자 ID, 이름, 비밀번호를 대화형으로 입력합니다. 비밀번호는 화면에 표시되지 않습니다.
+3. 비밀번호는 10자 이상이며 영문과 숫자를 포함해야 합니다.
+4. DB에는 scrypt hash만 저장됩니다.
+5. 동일 ID는 덮어쓰지 않고 거부됩니다. 변경에는 `docker compose exec backend npm run change-admin-password`를 사용합니다.
 
 ## 장애 시 확인 순서
 

@@ -27,3 +27,8 @@ logs/
 Thumbs.db
 scripts/auto-pull.log
 scripts/last-deployed.txt
+
+# PostgreSQL 운영 백업
+backups/
+*.dump
+*.backup

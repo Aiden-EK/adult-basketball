@@ -4,6 +4,17 @@ const scrypt = promisify(crypto.scrypt);
 const configuredSessionDays = Number(process.env.SESSION_TTL_DAYS || 7);
 const SESSION_DAYS = Number.isFinite(configuredSessionDays) && configuredSessionDays > 0 ? configuredSessionDays : 7;
 const allowedSameSiteValues = ['strict', 'lax', 'none'];
+const commonPasswords = new Set(['admin12345', 'basketball1', 'password123', 'qwerty12345', 'welcome1234']);
+
+function validateAdminPassword(password, loginId = '') {
+  if (typeof password !== 'string' || password.length < 10) return '비밀번호는 10자 이상이어야 합니다.';
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return '비밀번호에는 영문과 숫자가 모두 포함되어야 합니다.';
+  const normalized = password.toLowerCase();
+  if (commonPasswords.has(normalized)) return '너무 단순한 비밀번호는 사용할 수 없습니다.';
+  const normalizedLoginId = String(loginId).trim().toLowerCase();
+  if (normalizedLoginId.length >= 3 && normalized.includes(normalizedLoginId)) return '비밀번호에 관리자 ID를 포함할 수 없습니다.';
+  return null;
+}
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -35,4 +46,4 @@ function readCookie(header, name) {
   return null;
 }
 
-module.exports = { SESSION_DAYS, hashPassword, verifyPassword, createSessionToken, hashSessionToken, cookieOptions, serializeCookie, readCookie };
+module.exports = { SESSION_DAYS, validateAdminPassword, hashPassword, verifyPassword, createSessionToken, hashSessionToken, cookieOptions, serializeCookie, readCookie };

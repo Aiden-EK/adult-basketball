@@ -9,6 +9,7 @@ COPY server.js db.js ./
 COPY routes ./routes
 COPY services ./services
 COPY middleware ./middleware
+COPY scripts ./scripts
 
 EXPOSE 3000
 

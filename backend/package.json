@@ -8,8 +8,11 @@
     "test": "node --check server.js && node tests/standings.test.js && node tests/playerStandings.test.js && node tests/auth.test.js",
     "test:player-scores": "node tests/playerScores.integration.test.js",
     "test:auth": "node tests/auth.integration.test.js",
+    "test:admin-cli": "node tests/adminCli.integration.test.js",
     "test:winner": "node tests/leagueWinner.integration.test.js",
-    "setup:admin": "node scripts/setupAdmin.js"
+    "setup:admin": "node scripts/setupAdmin.js",
+    "change-admin-password": "node scripts/changeAdminPassword.js",
+    "list-admins": "node scripts/listAdmins.js"
   },
   "keywords": [],
   "author": "",

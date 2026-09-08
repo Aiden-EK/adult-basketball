@@ -1,11 +1,16 @@
 const assert = require('node:assert/strict');
 const fs = require('fs'); const path = require('path');
-const { hashPassword, verifyPassword, createSessionToken, hashSessionToken, serializeCookie, readCookie } = require('../services/auth');
+const { hashPassword, verifyPassword, createSessionToken, hashSessionToken, serializeCookie, readCookie, validateAdminPassword } = require('../services/auth');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 async function main() {
   const hash = await hashPassword('test-password-only');
   assert.equal(await verifyPassword('test-password-only', hash), true); assert.equal(await verifyPassword('wrong-password', hash), false);
   assert.equal(hash.includes('test-password-only'), false);
+  assert.equal(validateAdminPassword('StrongPass123', 'operator'), null);
+  assert.match(validateAdminPassword('short1', 'operator'), /10자/);
+  assert.match(validateAdminPassword('lettersOnlyPassword', 'operator'), /영문과 숫자/);
+  assert.match(validateAdminPassword('password123', 'operator'), /단순/);
+  assert.match(validateAdminPassword('operator12345', 'operator'), /ID/);
   const token = createSessionToken(); assert.notEqual(hashSessionToken(token), token);
   const cookie = serializeCookie('admin_session', token); assert.match(cookie, /HttpOnly/); assert.match(cookie, /SameSite=strict/); assert.equal(readCookie(cookie, 'admin_session'), token);
   const response = () => ({ statusCode: 200, status(code) { this.statusCode = code; return this }, json(body) { this.body = body; return this } });
