@@ -69,7 +69,8 @@ function validateRows(rows, file) {
 function sameGame(db, row, teams) {
   return db.team_a_id === teams[row.team_a].id && db.team_b_id === teams[row.team_b].id &&
     db.team_a_score === row.team_a_score && db.team_b_score === row.team_b_score &&
-    db.winner_team_id === teams[row.winner].id && db.result_type === row.result_type && (db.note || '') === row.note;
+    db.winner_team_id === teams[row.winner].id && db.result_type === row.result_type &&
+    db.status === 'COMPLETED' && (db.note || '') === row.note;
 }
 
 async function main() {
@@ -95,7 +96,7 @@ async function main() {
     }
     for (const row of allRows) {
       const teams = Object.fromEntries([row.team_a, row.team_b, row.winner].map((name) => [name, teamMap[`${row.leagueId}:${name}`]]));
-      const existing = await client.query(`SELECT g.team_a_id, g.team_b_id, g.team_a_score, g.team_b_score, g.winner_team_id, g.result_type, g.note FROM game g JOIN game_day gd ON gd.id = g.game_day_id WHERE gd.league_id = $1 AND gd.game_date = $2 AND g.game_no = $3`, [row.leagueId, row.date, row.game_no]);
+      const existing = await client.query(`SELECT g.team_a_id, g.team_b_id, g.team_a_score, g.team_b_score, g.winner_team_id, g.result_type, g.status, g.note FROM game g JOIN game_day gd ON gd.id = g.game_day_id WHERE gd.league_id = $1 AND gd.game_date = $2 AND g.game_no = $3`, [row.leagueId, row.date, row.game_no]);
       if (existing.rows.length && !sameGame(existing.rows[0], row, teams)) throw new Error(`Game conflict at ${row.source}`);
       if (existing.rows.length) summary.find((s) => s.leagueId === row.leagueId).skipped += 1;
     }
@@ -116,7 +117,7 @@ async function main() {
       const teams = Object.fromEntries([row.team_a, row.team_b, row.winner].map((name) => [name, teamMap[`${row.leagueId}:${name}`]]));
       const existing = await client.query('SELECT id FROM game WHERE game_day_id = $1 AND game_no = $2', [day.rows[0].id, row.game_no]);
       if (existing.rows.length) continue;
-      await client.query(`INSERT INTO game (game_day_id, game_no, team_a_id, team_b_id, team_a_score, team_b_score, result_type, winner_team_id, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [day.rows[0].id, row.game_no, teams[row.team_a].id, teams[row.team_b].id, row.team_a_score, row.team_b_score, row.result_type, teams[row.winner].id, row.note || null]);
+      await client.query(`INSERT INTO game (game_day_id, game_no, team_a_id, team_b_id, team_a_score, team_b_score, status, result_type, winner_team_id, note) VALUES ($1,$2,$3,$4,$5,$6,'COMPLETED',$7,$8,$9)`, [day.rows[0].id, row.game_no, teams[row.team_a].id, teams[row.team_b].id, row.team_a_score, row.team_b_score, row.result_type, teams[row.winner].id, row.note || null]);
       target.games += 1; target[row.result_type.toLowerCase()] += 1;
     }
     await client.query('COMMIT');
