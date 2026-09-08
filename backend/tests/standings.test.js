@@ -8,7 +8,10 @@ const game = (homeTeamId, awayTeamId, homeScore, awayScore, options = {}) => ({
   homeScore,
   awayScore,
   winnerTeamId: options.winnerTeamId ?? null,
-  status: options.status ?? 'COMPLETED'
+  status: options.status ?? 'COMPLETED',
+  gameDate: options.gameDate,
+  gameNo: options.gameNo,
+  gameId: options.gameId
 });
 const order = standings => standings.map(row => row.teamId);
 
@@ -77,4 +80,22 @@ const order = standings => standings.map(row => row.teamId);
   assert.equal(result[0].wins, 1, '확정 승리팀의 승수를 반영해야 한다');
 }
 
-console.log('순위 계산 테스트 11개 통과');
+{
+  const games = [
+    game(1, 2, 10, 5, { gameDate: '2026-07-01', gameNo: 1 }),
+    game(2, 1, 5, 10, { gameDate: '2026-07-08', gameNo: 1 }),
+    game(1, 2, 5, 10, { gameDate: '2026-07-15', gameNo: 1 }),
+    game(1, 2, 10, 5, { gameDate: '2026-07-22', gameNo: 1 })
+  ];
+  const result = calculateStandings([team(1), team(2)], games);
+  assert.equal(result.find(row => row.teamId === 1).currentWinStreak, 1, '최근 경기부터 현재 연승을 계산해야 한다');
+}
+
+{
+  const games = [game(1, 2, 10, 5), game(2, 1, 10, 5), game(1, 2, 10, 5)];
+  const result = calculateStandings([team(1, '블랙'), team(2, '화이트')], games);
+  const record = result.find(row => row.teamId === 1).headToHead[0];
+  assert.deepEqual(record, { opponentTeamId: 2, opponentTeamName: '화이트', wins: 2, losses: 1 }, '화면용 상대전적을 경기 결과로 계산해야 한다');
+}
+
+console.log('순위 계산 테스트 13개 통과');

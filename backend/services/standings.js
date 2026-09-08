@@ -9,7 +9,9 @@ function createTeamStanding(team) {
     pointsFor: 0,
     pointsAgainst: 0,
     pointDifference: 0,
-    winRate: 0
+    winRate: 0,
+    currentWinStreak: 0,
+    headToHead: []
   };
 }
 
@@ -39,6 +41,14 @@ function compareBaseMetrics(left, right) {
 
 function haveSameBaseMetrics(left, right) {
   return compareBaseMetrics(left, right) === 0;
+}
+
+function compareGameOrder(left, right) {
+  const leftDate = left.scheduledAt || left.gameDate || '';
+  const rightDate = right.scheduledAt || right.gameDate || '';
+  return String(leftDate).localeCompare(String(rightDate))
+    || Number(left.gameNo || 0) - Number(right.gameNo || 0)
+    || Number(left.gameId || 0) - Number(right.gameId || 0);
 }
 
 function calculateStandings(teams, games) {
@@ -72,13 +82,42 @@ function calculateStandings(teams, games) {
       away.wins += 1;
       home.losses += 1;
     }
-    completedGames.push({ homeTeamId: home.teamId, awayTeamId: away.teamId, winnerId });
+    completedGames.push({
+      homeTeamId: home.teamId,
+      awayTeamId: away.teamId,
+      winnerId,
+      gameId: game.gameId,
+      gameDate: game.gameDate,
+      scheduledAt: game.scheduledAt,
+      gameNo: game.gameNo
+    });
   }
 
   const standings = [...standingsByTeam.values()];
   for (const standing of standings) {
     standing.pointDifference = standing.pointsFor - standing.pointsAgainst;
     standing.winRate = standing.gamesPlayed === 0 ? 0 : standing.wins / standing.gamesPlayed;
+
+    const teamGames = completedGames
+      .filter(game => game.homeTeamId === standing.teamId || game.awayTeamId === standing.teamId)
+      .sort(compareGameOrder);
+    for (let index = teamGames.length - 1; index >= 0; index -= 1) {
+      if (teamGames[index].winnerId !== standing.teamId) break;
+      standing.currentWinStreak += 1;
+    }
+
+    const opponents = new Map();
+    for (const game of teamGames) {
+      const opponentId = game.homeTeamId === standing.teamId ? game.awayTeamId : game.homeTeamId;
+      if (!opponents.has(opponentId)) opponents.set(opponentId, { wins: 0, losses: 0 });
+      if (game.winnerId === standing.teamId) opponents.get(opponentId).wins += 1;
+      else if (game.winnerId === opponentId) opponents.get(opponentId).losses += 1;
+    }
+    standing.headToHead = [...opponents.entries()].map(([opponentTeamId, record]) => ({
+      opponentTeamId,
+      opponentTeamName: standingsByTeam.get(opponentTeamId)?.teamName || '',
+      ...record
+    })).sort((left, right) => left.opponentTeamName.localeCompare(right.opponentTeamName, 'ko'));
   }
   standings.sort((left, right) => compareBaseMetrics(left, right) || left.teamName.localeCompare(right.teamName, 'ko'));
 

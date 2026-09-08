@@ -54,7 +54,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/admin', requireAdmin);
 app.use('/api/admin/members', adminMembersRouter);
-app.use('/api/members', membersRouter);
+app.use('/api/members', requireAdmin, membersRouter);
 app.use('/api/leagues', leaguesRouter);
 app.use('/api/admin/leagues', adminLeaguesRouter);
 app.use('/api/admin/leagues/:leagueId/participants', adminLeagueParticipantsRouter);

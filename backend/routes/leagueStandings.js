@@ -21,7 +21,8 @@ router.get('/', async (req, res) => {
     const [teams, games] = await Promise.all([
       pool.query('SELECT id, name FROM team WHERE league_id = $1 ORDER BY sort_order, id', [leagueId]),
       pool.query(`
-        SELECT g.team_a_id AS "homeTeamId", g.team_b_id AS "awayTeamId",
+        SELECT g.id AS "gameId", gd.game_date AS "gameDate", g.scheduled_at AS "scheduledAt", g.game_no AS "gameNo",
+               g.team_a_id AS "homeTeamId", g.team_b_id AS "awayTeamId",
                g.team_a_score AS "homeScore", g.team_b_score AS "awayScore",
                g.winner_team_id AS "winnerTeamId", g.status
         FROM game g
