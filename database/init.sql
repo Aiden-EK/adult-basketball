@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS game (
     team_b_id BIGINT NOT NULL REFERENCES team(id) ON DELETE RESTRICT,
     team_a_score INTEGER CHECK (team_a_score >= 0),
     team_b_score INTEGER CHECK (team_b_score >= 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED', 'COMPLETED')),
+    scheduled_at TIMESTAMPTZ,
     result_type VARCHAR(20) CHECK (result_type IN ('NORMAL', 'TIEBREAK', 'FORFEIT')),
     winner_team_id BIGINT REFERENCES team(id) ON DELETE RESTRICT,
     note TEXT,
@@ -84,3 +86,11 @@ CREATE TABLE IF NOT EXISTS game (
     CONSTRAINT ck_game_different_teams CHECK (team_a_id <> team_b_id),
     CONSTRAINT ck_game_winner_is_participant CHECK (winner_team_id IS NULL OR winner_team_id IN (team_a_id, team_b_id))
 );
+
+ALTER TABLE game ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED';
+ALTER TABLE game ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
+ALTER TABLE game ALTER COLUMN team_a_score DROP NOT NULL;
+ALTER TABLE game ALTER COLUMN team_b_score DROP NOT NULL;
+ALTER TABLE game ALTER COLUMN result_type DROP NOT NULL;
+ALTER TABLE game DROP CONSTRAINT IF EXISTS ck_game_status;
+ALTER TABLE game ADD CONSTRAINT ck_game_status CHECK (status IN ('SCHEDULED', 'COMPLETED'));

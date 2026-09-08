@@ -14,6 +14,8 @@ const adminLeagueParticipantsRouter = require('./routes/adminLeagueParticipants'
 const leagueParticipantsRouter = require('./routes/leagueParticipants');
 const adminTeamsRouter = require('./routes/adminTeams');
 const leagueTeamsRouter = require('./routes/leagueTeams');
+const adminGamesRouter = require('./routes/adminGames');
+const leagueGamesRouter = require('./routes/leagueGames');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -50,6 +52,8 @@ app.use('/api/admin/leagues/:leagueId/participants', adminLeagueParticipantsRout
 app.use('/api/admin/leagues/:leagueId/teams', adminTeamsRouter);
 app.use('/api/leagues/:leagueId/participants', leagueParticipantsRouter);
 app.use('/api/leagues/:leagueId/teams', leagueTeamsRouter);
+app.use('/api/admin/leagues/:leagueId/games', adminGamesRouter);
+app.use('/api/leagues/:leagueId/games', leagueGamesRouter);
 
 const server = app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
