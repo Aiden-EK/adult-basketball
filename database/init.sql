@@ -94,3 +94,13 @@ ALTER TABLE game ALTER COLUMN team_b_score DROP NOT NULL;
 ALTER TABLE game ALTER COLUMN result_type DROP NOT NULL;
 ALTER TABLE game DROP CONSTRAINT IF EXISTS ck_game_status;
 ALTER TABLE game ADD CONSTRAINT ck_game_status CHECK (status IN ('SCHEDULED', 'COMPLETED'));
+
+CREATE TABLE IF NOT EXISTS game_player_score (
+    id BIGSERIAL PRIMARY KEY,
+    game_id BIGINT NOT NULL REFERENCES game(id) ON DELETE RESTRICT,
+    league_member_id BIGINT NOT NULL REFERENCES league_member(id) ON DELETE RESTRICT,
+    points INTEGER NOT NULL CHECK (points >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_game_player_score_game_member UNIQUE (game_id, league_member_id)
+);
