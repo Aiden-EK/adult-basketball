@@ -12,9 +12,25 @@ import '../styles/home.css'
 const gameTime = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).getTime()
 const compareGames = (left, right) => gameTime(left) - gameTime(right) || Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId)
 const formatDate = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+const isWinner = (game, teamId) => game?.status === 'COMPLETED' && Number(game.winnerTeamId) === Number(teamId)
 
 function FeaturedGame({ label, game }) {
-  return <article className="home-game card"><small>{label}</small>{game ? <><div><strong title={game.homeTeam.name}>{game.homeTeam.name}</strong><b>{game.status === 'COMPLETED' ? `${game.homeScore} : ${game.awayScore}` : 'VS'}</b><strong title={game.awayTeam.name}>{game.awayTeam.name}</strong></div><span>{formatDate(game)}</span></> : <p className="muted">해당 경기가 없습니다.</p>}</article>
+  const homeWon = isWinner(game, game?.homeTeam.id)
+  const awayWon = isWinner(game, game?.awayTeam.id)
+
+  return <article className="home-game card">
+    <small>{label}</small>
+    {game ? <>
+      <div>
+        <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
+        {game.status === 'COMPLETED'
+          ? <b className="home-game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b>
+          : <b>VS</b>}
+        <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
+      </div>
+      <span>{formatDate(game)}</span>
+    </> : <p className="muted">다음 경기가 아직 등록되지 않았습니다.</p>}
+  </article>
 }
 
 export default function HomePage() {
@@ -44,8 +60,9 @@ export default function HomePage() {
 
   return <>
     <section className="active-league-head">
-      <div><small>CURRENT LEAGUE</small><h1>{league.name}</h1><p>{league.year}년 {league.quarter}분기</p></div>
-      <LeagueStatusBadge status={league.status} />
+      <small>CURRENT LEAGUE</small>
+      <div className="active-league-line"><h1>{league.name}</h1><LeagueStatusBadge status={league.status} /></div>
+      <p>{league.year}년 {league.quarter}분기</p>
     </section>
     <section className="home-section">
       <div className="section-head"><div><small>STANDINGS</small><h2>현재 리그 순위</h2></div><span className="section-note">경기 결과 자동 반영</span></div>
