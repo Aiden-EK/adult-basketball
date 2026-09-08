@@ -1,3 +1,17 @@
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0 14px}.tabs button{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:10px;padding:11px 4px;font-size:12px}.tabs button.selected{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}.admin-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.admin-card{position:relative;display:flex;flex-direction:column;gap:6px;padding:17px;color:var(--ink);text-decoration:none}.admin-card strong{font-size:15px}.admin-card span{color:var(--muted);font-size:11px;line-height:1.5}.admin-card b{position:absolute;right:15px;bottom:15px;color:var(--green)}.create-link{display:block;text-align:center;text-decoration:none;padding:13px 0;margin-bottom:14px}.league-admin-list{margin-top:10px}.primary:disabled{opacity:.6;cursor:wait}.brand{text-decoration:none}.search-input{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px;margin:0 0 14px;background:#fff}.active-text{color:var(--green);font-weight:700}.inactive-text{color:#aa5148;font-weight:700}.member-detail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.active-pill,.inactive-pill{border-radius:99px;padding:5px 9px;font-size:12px;font-weight:700}.active-pill{color:var(--green);background:var(--mint)}.inactive-pill{color:#aa5148;background:#fff0ee}.small-button{min-height:36px;padding:0 12px;font-size:12px}
 .select-label{display:block;margin-bottom:7px;font-size:13px;font-weight:700}.league-select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);margin-bottom:14px}.participant-list{overflow:hidden}.participant-row{display:flex;align-items:center;gap:13px;padding:15px 16px;border-bottom:1px solid var(--line);cursor:pointer}.participant-row:last-child{border-bottom:0}.participant-row input{width:20px;height:20px;accent-color:var(--green)}.participant-row span{display:flex;flex-direction:column;gap:3px}.participant-row small{margin:0;color:var(--muted);font:400 12px 'Noto Sans KR';letter-spacing:0}.inactive-row{background:#fafafa;color:var(--muted)}
 .app-shell a{color:inherit;text-decoration:none}.app-shell a:visited{color:inherit}.primary{display:flex;align-items:center;justify-content:center;text-decoration:none}.round{display:grid;align-items:center;justify-content:center;text-decoration:none}.league-card,.admin-card,.nav{ text-decoration:none }
+.status-badge{display:inline-flex;align-items:center;width:max-content;padding:3px 8px;background:var(--mint);color:var(--green);border-radius:99px;font-size:11px;font-style:normal;font-weight:700}
+.compact-list{display:flex;flex-direction:column;gap:8px}
+.year-group{margin-bottom:18px}
+.year-heading{margin:0 0 8px;font-size:15px;letter-spacing:-.03em}
+.compact-card{min-height:72px;padding:12px 14px!important;border-radius:14px}
+.compact-card h3{margin:4px 0 5px;font-size:15px}
+.compact-meta{display:flex;align-items:center;gap:7px}
+.compact-meta label{font-size:11px}
+.compact-quarter{font-size:11px;font-weight:700;color:var(--green)}
+.member-compact-card h3{margin:0 0 4px}
+.member-compact-card p{margin:0;font-size:12px}
+.admin-menu-card{min-height:82px;padding:14px 42px 14px 15px!important}
+.admin-menu-card b{top:50%;right:15px;bottom:auto;transform:translateY(-50%)}
+.admin-menu-card span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
