@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --check server.js && node tests/standings.test.js",
+    "test": "node --check server.js && node tests/standings.test.js && node tests/playerStandings.test.js",
     "test:player-scores": "node tests/playerScores.integration.test.js"
   },
   "keywords": [],
