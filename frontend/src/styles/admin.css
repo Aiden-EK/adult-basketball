@@ -1,0 +1,36 @@
+/* 관리자 화면 공통 모바일 규칙 */
+.page-content { width: min(calc(100% - 32px), 760px); }
+.title { margin-bottom: 18px; }
+.title h1 { line-height: 1.25; }
+.title .muted { margin: 0; font-size: 13px; }
+.details, .form { padding: 16px; }
+.form { gap: 6px; }
+.form label { margin-top: 5px; }
+.form input, .form select, .form textarea,
+.search-input, .league-select, .team-add input, .participant-row select {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.primary, .secondary { min-height: 44px; border-radius: 12px; padding: 0 16px; }
+.small-button { min-height: 40px; padding: 0 11px; }
+.search-input { margin-bottom: 12px; }
+.compact-card { min-height: 68px; padding: 10px 13px !important; }
+.team-add { padding: 10px; margin-bottom: 12px; }
+.team-add .primary { padding: 0 14px; }
+.team-grid { gap: 8px; }
+.team-card { padding: 12px; }
+.team-card h3 { margin-bottom: 6px; }
+.team-card p { margin-bottom: 9px; }
+.section-title { margin: 22px 0 9px; }
+.admin-placeholder { padding: 18px 16px; }
+.admin-placeholder strong { font-size: 14px; }
+.admin-placeholder p { margin: 6px 0 0; }
+.game-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
+.game-form h3, .game-form .game-date-field, .game-form .score-fields { grid-column: 1 / -1; }
+.game-form h3 { margin: 0 0 1px; font-size: 16px; }
+.game-form label input, .game-form label select { width: 100%; margin-top: 4px; }
+.game-form .game-status-field { grid-column: 1; }
+.game-form .game-submit { grid-column: 2; grid-row: 4; align-self: end; width: 100%; margin-top: 18px; }
+.game-form .score-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.game-form .score-fields label { margin-top: 0; }

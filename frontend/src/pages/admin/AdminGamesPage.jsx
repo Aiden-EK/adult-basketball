@@ -103,14 +103,14 @@ export default function AdminGamesPage() {
     {error && <ErrorMessage text={error} />}
     <select className="league-select" value={leagueId} onChange={event => changeLeague(event.target.value)}>{leagues.map(league => <option key={league.id} value={league.id}>{league.name}</option>)}</select>
 
-    <form className="card form" onSubmit={save}>
+    <form className="card form game-form" onSubmit={save}>
       <h3>{editing ? '경기 수정' : '경기 추가'}</h3>
       <label>홈팀<select value={form.homeTeamId} onChange={event => change('homeTeamId', event.target.value)} required><option value="">선택</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label>원정팀<select value={form.awayTeamId} onChange={event => change('awayTeamId', event.target.value)} required><option value="">선택</option>{teams.filter(team => String(team.id) !== String(form.homeTeamId)).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
-      <label>경기 일시<input type="datetime-local" value={form.scheduledAt} onChange={event => change('scheduledAt', event.target.value)} /></label>
-      <label>상태<select value={form.status} onChange={event => change('status', event.target.value)}><option value="SCHEDULED">예정</option><option value="COMPLETED">종료</option></select></label>
+      <label className="game-date-field">경기 일시<input type="datetime-local" value={form.scheduledAt} onChange={event => change('scheduledAt', event.target.value)} /></label>
+      <label className="game-status-field">상태<select value={form.status} onChange={event => change('status', event.target.value)}><option value="SCHEDULED">예정</option><option value="COMPLETED">종료</option></select></label>
       {form.status === 'COMPLETED' && <div className="score-fields"><label>홈팀 점수<input type="number" min="0" value={form.homeScore} onChange={event => change('homeScore', event.target.value)} required /></label><label>원정팀 점수<input type="number" min="0" value={form.awayScore} onChange={event => change('awayScore', event.target.value)} required /></label></div>}
-      <button className="primary" disabled={!teams.length}>{editing ? '수정 저장' : '경기 추가'}</button>
+      <button className="primary game-submit" disabled={!teams.length}>{editing ? '수정 저장' : '경기 추가'}</button>
       {editing && <button type="button" className="secondary" onClick={reset}>취소</button>}
     </form>
 
