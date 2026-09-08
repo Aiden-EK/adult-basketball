@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db');
-const { COOKIE_NAME, requireAuth } = require('../middleware/auth');
+const { COOKIE_NAME } = require('../middleware/auth');
 const { SESSION_DAYS, verifyPassword, createSessionToken, hashSessionToken, cookieOptions, serializeCookie, readCookie } = require('../services/auth');
 const router = express.Router();
 
@@ -18,10 +18,15 @@ router.post('/login', async (req, res) => {
   } catch (error) { console.error('Login failed'); res.status(500).json({ message: '로그인을 처리하지 못했습니다.' }); }
 });
 router.get('/me', (req, res) => res.json({ authenticated: Boolean(req.user), user: req.user || null }));
-router.post('/logout', requireAuth, async (req, res) => {
-  const token = readCookie(req.headers.cookie, COOKIE_NAME);
-  if (token) await pool.query('DELETE FROM admin_session WHERE token_hash=$1', [hashSessionToken(token)]);
-  res.setHeader('Set-Cookie', serializeCookie(COOKIE_NAME, '', { ...cookieOptions(), maxAge: 0 }));
-  res.json({ authenticated: false, user: null });
+router.post('/logout', async (req, res) => {
+  try {
+    const token = readCookie(req.headers.cookie, COOKIE_NAME);
+    if (token) await pool.query('DELETE FROM admin_session WHERE token_hash=$1', [hashSessionToken(token)]);
+    res.setHeader('Set-Cookie', serializeCookie(COOKIE_NAME, '', { ...cookieOptions(), maxAge: 0 }));
+    res.json({ authenticated: false, user: null });
+  } catch (error) {
+    console.error('Logout failed');
+    res.status(500).json({ message: '로그아웃을 처리하지 못했습니다.' });
+  }
 });
 module.exports = router;

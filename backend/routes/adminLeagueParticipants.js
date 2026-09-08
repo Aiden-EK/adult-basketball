@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
       ORDER BY m.id
     `, [leagueId]);
     res.json(result.rows);
-  } catch (error) { console.error('Admin league participants query failed:', error); res.status(500).json({ message: 'Database error' }); }
+  } catch (error) { console.error('Admin league participants query failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
 
 router.post('/', async (req, res) => {
@@ -33,13 +33,13 @@ router.post('/', async (req, res) => {
     if (!member.rows[0].isActive) return res.status(400).json({ message: 'Inactive member cannot be added' });
     const result = await pool.query('INSERT INTO league_member (league_id, member_id) VALUES ($1, $2) RETURNING id, league_id AS "leagueId", member_id AS "memberId", created_at AS "createdAt"', [leagueId, memberId]);
     res.status(201).json(result.rows[0]);
-  } catch (error) { if (error.code === '23505') return res.status(409).json({ message: 'Member already participates in this league' }); console.error('Admin league participant create failed:', error); res.status(500).json({ message: 'Database error' }); }
+  } catch (error) { if (error.code === '23505') return res.status(409).json({ message: 'Member already participates in this league' }); console.error('Admin league participant create failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
 
 router.delete('/:memberId', async (req, res) => {
   const leagueId = parseId(req.params.leagueId); const memberId = parseId(req.params.memberId);
   if (leagueId === null || memberId === null) return res.status(400).json({ message: 'Invalid participant id' });
-  try { const result = await pool.query('DELETE FROM league_member WHERE league_id = $1 AND member_id = $2 RETURNING id', [leagueId, memberId]); if (result.rows.length === 0) return res.status(404).json({ message: 'Participant not found' }); res.status(204).send(); } catch (error) { console.error('Admin league participant delete failed:', error); res.status(500).json({ message: 'Database error' }); }
+  try { const result = await pool.query('DELETE FROM league_member WHERE league_id = $1 AND member_id = $2 RETURNING id', [leagueId, memberId]); if (result.rows.length === 0) return res.status(404).json({ message: 'Participant not found' }); res.status(204).send(); } catch (error) { console.error('Admin league participant delete failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
 
 router.put('/', async (req, res) => {
@@ -66,7 +66,7 @@ router.put('/', async (req, res) => {
     for (const memberId of currentIds.filter((id) => !desired.includes(id))) await client.query('DELETE FROM league_member WHERE league_id = $1 AND member_id = $2', [leagueId, memberId]);
     await client.query('COMMIT');
     res.json({ leagueId, memberIds: desired });
-  } catch (error) { await client.query('ROLLBACK'); console.error('Admin league participants update failed:', error); res.status(500).json({ message: 'Database error' }); } finally { client.release(); }
+  } catch (error) { await client.query('ROLLBACK'); console.error('Admin league participants update failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); } finally { client.release(); }
 });
 
 module.exports = router;

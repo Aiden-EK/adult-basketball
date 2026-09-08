@@ -40,7 +40,7 @@ export default function AdminGamesPage() {
   }
 
   useEffect(() => {
-    getLeagues().then(data => { setLeagues(data); if (data[0]) { const selected = String(data[0].id); setLeagueId(selected); load(selected) } }).catch(loadError => setError(loadError.message))
+    getLeagues().then(data => { setLeagues(data); if (data[0]) { const selected = String(data[0].id); setLeagueId(selected); load(selected) } else setGames([]) }).catch(loadError => { setError(loadError.message); setGames([]) })
   }, [])
 
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }))

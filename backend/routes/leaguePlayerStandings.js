@@ -5,6 +5,6 @@ const router = express.Router({ mergeParams: true });
 router.get('/', async (req, res) => {
   if (!/^\d+$/.test(String(req.params.leagueId)) || Number(req.params.leagueId) < 1) return res.status(400).json({ message: 'Invalid league id' });
   try { res.json({ leagueId: Number(req.params.leagueId), scorers: await readPlayerStandings(pool, Number(req.params.leagueId)) }); }
-  catch (error) { if (error instanceof PlayerStandingsError) return res.status(error.status).json({ message: error.message }); console.error('Player standings query failed:', error); res.status(500).json({ message: 'Database error' }); }
+  catch (error) { if (error instanceof PlayerStandingsError) return res.status(error.status).json({ message: error.message }); console.error('Player standings query failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
 module.exports = router;

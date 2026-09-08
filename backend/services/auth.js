@@ -1,7 +1,9 @@
 const crypto = require('crypto');
 const { promisify } = require('util');
 const scrypt = promisify(crypto.scrypt);
-const SESSION_DAYS = 7;
+const configuredSessionDays = Number(process.env.SESSION_TTL_DAYS || 7);
+const SESSION_DAYS = Number.isFinite(configuredSessionDays) && configuredSessionDays > 0 ? configuredSessionDays : 7;
+const allowedSameSiteValues = ['strict', 'lax', 'none'];
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -19,7 +21,12 @@ async function verifyPassword(password, stored) {
 
 function createSessionToken() { return crypto.randomBytes(32).toString('base64url'); }
 function hashSessionToken(token) { return crypto.createHash('sha256').update(token).digest('hex'); }
-function cookieOptions() { return { httpOnly: true, sameSite: 'strict', secure: process.env.SESSION_COOKIE_SECURE === 'true', path: '/', maxAge: SESSION_DAYS * 86400 }; }
+function cookieOptions() {
+  const configuredSameSite = String(process.env.SESSION_COOKIE_SAME_SITE || 'strict').toLowerCase();
+  const sameSite = allowedSameSiteValues.includes(configuredSameSite) ? configuredSameSite : 'strict';
+  const secure = process.env.SESSION_COOKIE_SECURE === 'true';
+  return { httpOnly: true, sameSite, secure: sameSite === 'none' ? true : secure, path: '/', maxAge: Math.floor(SESSION_DAYS * 86400) };
+}
 function serializeCookie(name, value, options = cookieOptions()) {
   return [`${name}=${encodeURIComponent(value)}`, `Max-Age=${options.maxAge}`, `Path=${options.path}`, 'HttpOnly', `SameSite=${options.sameSite}`, options.secure ? 'Secure' : ''].filter(Boolean).join('; ');
 }

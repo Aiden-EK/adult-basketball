@@ -14,7 +14,7 @@ const compareGames = (left, right) => gameTime(left) - gameTime(right) || Number
 const formatDate = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
 const isWinner = (game, teamId) => game?.status === 'COMPLETED' && Number(game.winnerTeamId) === Number(teamId)
 
-function FeaturedGame({ label, game }) {
+function FeaturedGame({ label, game, emptyText }) {
   const homeWon = isWinner(game, game?.homeTeam.id)
   const awayWon = isWinner(game, game?.awayTeam.id)
 
@@ -29,7 +29,7 @@ function FeaturedGame({ label, game }) {
         <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
       </div>
       <span>{formatDate(game)}</span>
-    </> : <p className="muted">다음 경기가 아직 등록되지 않았습니다.</p>}
+    </> : <p className="muted">{emptyText}</p>}
   </article>
 }
 
@@ -71,7 +71,7 @@ export default function HomePage() {
     </section>
     <section className="home-section">
       <div className="section-head"><div><small>GAMES</small><h2>리그 경기</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=games`}>전체 보기 →</Link></div>
-      <div className="home-games"><FeaturedGame label="최근 경기" game={completed} /><FeaturedGame label="다음 경기" game={scheduled} /></div>
+      <div className="home-games"><FeaturedGame label="최근 경기" game={completed} emptyText="완료된 최근 경기가 없습니다." /><FeaturedGame label="다음 경기" game={scheduled} emptyText="다음 경기가 아직 등록되지 않았습니다." /></div>
     </section>
     <section className="home-links">
       <Link className="card" to={`/leagues/${league.id}?tab=participants`}><b>팀 · 참가자</b><span>현재 팀 편성 보기 →</span></Link>

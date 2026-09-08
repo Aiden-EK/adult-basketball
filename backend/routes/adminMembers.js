@@ -6,7 +6,7 @@ const memberFields = `id, name, birth_year AS "birthYear", height, positions, gr
 const validTypes = ['REGULAR', 'GUEST'];
 
 function parseMemberId(value) { if (!/^\d+$/.test(value)) return null; const id = Number(value); return Number.isSafeInteger(id) && id > 0 ? id : null; }
-function sendDatabaseError(res, error, action) { console.error(`Admin member ${action} failed:`, error); res.status(500).json({ message: 'Database error' }); }
+function sendDatabaseError(res, error, action) { console.error(`Admin member ${action} failed:`, error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 function getMemberType(body) { return body.member_type ?? body.memberType; }
 function validateName(name) { return typeof name === 'string' && name.trim().length > 0 && name.trim().length <= 100; }
 

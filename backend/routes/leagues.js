@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('League list query failed:', error);
-    res.status(500).json({ message: 'Database error' });
+    res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
   }
 });
 
@@ -58,7 +58,7 @@ router.get('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('League detail query failed:', error);
-    res.status(500).json({ message: 'Database error' });
+    res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
   }
 });
 
