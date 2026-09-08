@@ -7,6 +7,7 @@ RUN npm ci --omit=dev
 
 COPY server.js db.js ./
 COPY routes ./routes
+COPY services ./services
 
 EXPOSE 3000
 
