@@ -35,6 +35,10 @@ function validateCreateLeague(body) {
   return null;
 }
 
+function isValidStatus(status) {
+  return ['PLANNED', 'ACTIVE', 'COMPLETED'].includes(status);
+}
+
 router.post('/', async (req, res) => {
   const validationError = validateCreateLeague(req.body);
   if (validationError) {
@@ -61,6 +65,57 @@ router.post('/', async (req, res) => {
 
     console.error('League creation failed:', error);
     res.status(500).json({ message: 'Database error' });
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const { status } = req.body || {};
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).json({ message: 'Invalid league id' });
+  }
+
+  if (!isValidStatus(status)) {
+    return res.status(400).json({ message: 'status must be PLANNED, ACTIVE, or COMPLETED' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const leagueResult = await client.query(
+      `SELECT id FROM league WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+    if (leagueResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'League not found' });
+    }
+
+    if (status === 'ACTIVE') {
+      const activeResult = await client.query(
+        `SELECT id FROM league WHERE status = 'ACTIVE' AND id <> $1 LIMIT 1 FOR UPDATE`,
+        [id]
+      );
+      if (activeResult.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: 'Another active league already exists' });
+      }
+    }
+
+    const result = await client.query(
+      `UPDATE league SET status = $1 WHERE id = $2 RETURNING ${createdLeagueFields}`,
+      [status, id]
+    );
+    await client.query('COMMIT');
+    return res.json(result.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('League status update failed:', error);
+    return res.status(500).json({ message: 'Database error' });
+  } finally {
+    client.release();
   }
 });
 

@@ -2,6 +2,7 @@ const statusLabels = {
   ACTIVE: '진행 중',
   LIVE: '진행 중',
   ENDED: '종료',
+  COMPLETED: '종료',
   PLANNED: '예정',
 }
 
