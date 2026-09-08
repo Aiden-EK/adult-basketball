@@ -7,6 +7,7 @@ require('dotenv').config({
 
 const pool = require('./db');
 const adminMembersRouter = require('./routes/adminMembers');
+const membersRouter = require('./routes/members');
 const leaguesRouter = require('./routes/leagues');
 const adminLeaguesRouter = require('./routes/adminLeagues');
 
@@ -38,6 +39,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.use('/api/admin/members', adminMembersRouter);
+app.use('/api/members', membersRouter);
 app.use('/api/leagues', leaguesRouter);
 app.use('/api/admin/leagues', adminLeaguesRouter);
 
