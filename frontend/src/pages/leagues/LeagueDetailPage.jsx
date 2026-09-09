@@ -5,7 +5,7 @@ import { ErrorMessage, EmptyState, Loading } from '../../components/Status'
 import { getLeague, getLeagueScorers, getLeagueStandings, getLeagueWinner } from '../../services/leagueApi'
 import { getLeagueParticipants } from '../../services/participantApi'
 import { getLeagueTeams } from '../../services/teamApi'
-import { getLeagueGames, getPlayerScores } from '../../services/gameApi'
+import { getLeagueAttendance, getLeagueAttendanceSummary, getLeagueGames, getPlayerScores } from '../../services/gameApi'
 import StandingsList from '../../components/StandingsList'
 import LeagueStatusBadge from '../../components/LeagueStatusBadge'
 import '../../styles/game-list.css'
@@ -37,6 +37,25 @@ function dateStatus(games) {
   return '진행 중'
 }
 
+function AttendanceSection({ summary, detail, expanded, onToggle }) {
+  if (!summary?.isRegistered) return <div className="game-day-attendance"><div className="attendance-summary"><span className="attendance-empty">출석 미등록</span></div></div>
+  return <div className="game-day-attendance">
+    <div className="attendance-summary">
+      <span><b>참석 {summary.totalCount}명</b><i>·</i>정회원 {summary.memberCount}<i>·</i>게스트 {summary.guestCount}</span>
+      <button type="button" onClick={onToggle} aria-expanded={expanded}>참석자 {expanded ? '접기' : '보기'} <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>
+    </div>
+    {expanded && (detail === undefined
+      ? <p className="attendance-loading">참석자를 불러오는 중...</p>
+      : detail === null
+        ? <p className="attendance-error">참석자 정보를 불러오지 못했습니다.</p>
+        : <div className="attendance-details">
+          {detail.memberCount > 0 && <section><h4><span>정회원</span><b>{detail.memberCount}명</b></h4>{detail.attendees.filter(attendee => attendee.type === 'MEMBER').map(attendee => <p key={`member-${attendee.id}`}><b>{attendee.name}</b>{attendee.teamName && <span>{attendee.teamName}</span>}</p>)}</section>}
+          {detail.guestCount > 0 && <section><h4><span>게스트</span><b>{detail.guestCount}명</b></h4>{detail.attendees.filter(attendee => attendee.type === 'GUEST').map(attendee => <p key={`guest-${attendee.id}`}><b>{attendee.name}</b><span>게스트</span></p>)}</section>}
+          {detail.totalCount === 0 && <p className="attendance-none">참석자가 없습니다.</p>}
+        </div>)}
+  </div>
+}
+
 function ScorersList({ scorers }) {
   if (scorers.every(player => player.totalPoints === 0 && player.gamesScored === 0)) return <EmptyState text="아직 개인 득점 기록이 없습니다." />
   const leaders = scorers.filter(player => player.rank === 1)
@@ -62,11 +81,12 @@ function LeagueTabs({ tabs, selectedTab, onSelect }) {
 }
 
 export default function LeagueDetailPage() {
-  const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [scores, setScores] = useState({}); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
+  const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [attendanceSummary, setAttendanceSummary] = useState({}); const [attendanceDetails, setAttendanceDetails] = useState({}); const [expandedAttendance, setExpandedAttendance] = useState(null); const [scores, setScores] = useState({}); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
   useEffect(() => { getLeague(id).then(data => { const availableTabs = data.status === 'COMPLETED' ? completedTabs : activeTabs; const defaultTab = data.status === 'COMPLETED' ? 'winner' : 'standings'; setLeague(data); setTab(current => availableTabs.some(([key]) => key === current) ? current : defaultTab) }).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id])
-  useEffect(() => { if (tab === 'standings') getLeagueStandings(id).then(data => setStandings(data.standings)).catch(() => setError('순위 정보를 불러오지 못했습니다.')); if (tab === 'scorers') getLeagueScorers(id).then(data => setScorers(data.scorers)).catch(() => setError('개인 득점 순위를 불러오지 못했습니다.')); if (tab === 'winner') getLeagueWinner(id).then(data => setWinner(data.winner)).catch(() => setError('우승팀 정보를 불러오지 못했습니다.')); if (tab === 'participants') Promise.all([getLeagueParticipants(id), getLeagueTeams(id)]).then(([p, t]) => { setParticipants(p); setTeams(t) }).catch(() => setError('참가자 정보를 불러오지 못했습니다.')); if (tab === 'games') getLeagueGames(id).then(setGames).catch(() => setError('경기 정보를 불러오지 못했습니다.')) }, [id, tab])
+  useEffect(() => { if (tab === 'standings') getLeagueStandings(id).then(data => setStandings(data.standings)).catch(() => setError('순위 정보를 불러오지 못했습니다.')); if (tab === 'scorers') getLeagueScorers(id).then(data => setScorers(data.scorers)).catch(() => setError('개인 득점 순위를 불러오지 못했습니다.')); if (tab === 'winner') getLeagueWinner(id).then(data => setWinner(data.winner)).catch(() => setError('우승팀 정보를 불러오지 못했습니다.')); if (tab === 'participants') Promise.all([getLeagueParticipants(id), getLeagueTeams(id)]).then(([p, t]) => { setParticipants(p); setTeams(t) }).catch(() => setError('참가자 정보를 불러오지 못했습니다.')); if (tab === 'games') Promise.all([getLeagueGames(id), getLeagueAttendanceSummary(id)]).then(([gameData, summaryData]) => { setGames(gameData); setAttendanceSummary(Object.fromEntries(summaryData.dates.map(item => [item.date, item]))) }).catch(() => setError('경기 정보를 불러오지 못했습니다.')) }, [id, tab])
   const grouped = teams.map(t => ({ ...t, members: participants?.filter(p => Number(p.teamId) === Number(t.id)) || [] })); const unassigned = participants?.filter(p => p.teamId == null) || []
   const showScores = gameId => { if (scores[gameId] !== undefined) return; getPlayerScores(gameId).then(data => setScores(s => ({ ...s, [gameId]: data }))).catch(() => setScores(s => ({ ...s, [gameId]: null }))) }
+  const toggleAttendance = date => { const cacheKey = `${id}:${date}`; if (expandedAttendance === cacheKey) { setExpandedAttendance(null); return } setExpandedAttendance(cacheKey); if (attendanceDetails[cacheKey] !== undefined) return; getLeagueAttendance(id, date).then(data => setAttendanceDetails(current => ({ ...current, [cacheKey]: data }))).catch(() => setAttendanceDetails(current => ({ ...current, [cacheKey]: null }))) }
   if (error) return <><PageTitle title="리그 상세" back /><ErrorMessage text={error} /></>; if (!league || !tab) return <><PageTitle title="리그 상세" back /><Loading /></>
   const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
   const selectTab = key => { setTab(key); setSearchParams({ tab: key }, { replace: true }) }
@@ -89,6 +109,7 @@ export default function LeagueDetailPage() {
             {expanded && <div className="score-details">{expanded.teams.map(team => <div className="score-team" key={team.teamId}><h4>{team.teamName}</h4>{team.players.filter(p => p.hasScore).map(p => <p key={p.leagueMemberId}><b>{p.name}</b><span>{p.points}점</span></p>)}{team.players.every(p => !p.hasScore) && <p className="muted">개인 득점 기록이 아직 입력되지 않았습니다.</p>}</div>)}</div>}
           </section>
         })}</div>
+        <AttendanceSection summary={attendanceSummary[group.date]} detail={attendanceDetails[`${id}:${group.date}`]} expanded={expandedAttendance === `${id}:${group.date}`} onToggle={() => toggleAttendance(group.date)} />
       </article>)}</div>
       : tab === 'scorers'
         ? scorers === null ? <Loading /> : <ScorersList scorers={scorers} />

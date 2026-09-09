@@ -1,5 +1,7 @@
 import { apiRequest } from './api'
 export const getLeagueGames = (id) => apiRequest(`/leagues/${id}/games`)
+export const getLeagueAttendanceSummary = id => apiRequest(`/leagues/${id}/attendance/summary`)
+export const getLeagueAttendance = (id, date) => apiRequest(`/leagues/${id}/attendance?date=${encodeURIComponent(date)}`)
 export const getAdminLeagueGames = (id) => apiRequest(`/admin/leagues/${id}/games`)
 export const createAdminGame = (id, data) => apiRequest(`/admin/leagues/${id}/games`, { method: 'POST', body: JSON.stringify(data) })
 export const createAdminGameSet = (id, data) => apiRequest(`/admin/leagues/${id}/games/set`, { method: 'POST', body: JSON.stringify(data) })
