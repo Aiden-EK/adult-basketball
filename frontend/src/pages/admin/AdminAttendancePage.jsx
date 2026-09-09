@@ -3,6 +3,7 @@ import PageTitle from '../../components/PageTitle'
 import { EmptyState, ErrorMessage, Loading } from '../../components/Status'
 import { getLeagues } from '../../services/leagueApi'
 import { getAdminAttendanceDates, getAdminLeagueAttendance, saveAdminLeagueAttendance } from '../../services/gameApi'
+import { formatLeagueLabel } from '../../utils/league'
 
 const dateLabel = value => new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -132,7 +133,7 @@ export default function AdminAttendancePage() {
     {leagues === null ? <Loading /> : leagues.length === 0 ? <EmptyState text="먼저 리그를 생성해주세요." /> : <>
       <label className="select-label" htmlFor="attendance-league">리그</label>
       <select id="attendance-league" className="league-select" value={leagueId} onChange={e => setLeagueId(e.target.value)}>
-        {leagues.map(league => <option key={league.id} value={league.id}>{league.name}</option>)}
+        {leagues.map(league => <option key={league.id} value={league.id}>{formatLeagueLabel(league)}</option>)}
       </select>
       {dates === null ? <Loading /> : dates.length === 0 ? <EmptyState text="날짜가 등록된 경기가 없습니다." /> : <>
         <label className="select-label" htmlFor="attendance-date">경기 날짜</label>
@@ -146,26 +147,30 @@ export default function AdminAttendancePage() {
           <p>{data.games.map(game => `${game.homeTeamName} vs ${game.awayTeamName}`).join(' · ')}</p>
         </section>
         <div className="attendance-toolbar">
-          <strong>{dateLabel(data.attendanceDate)} 참가자 <span>참석 {presentCount} / {data.members.length}</span></strong>
+          <div className="attendance-summary">
+            <strong>{dateLabel(data.attendanceDate)} 참가자</strong>
+            <span className="attendance-count">참석 {presentCount} / {data.members.length}</span>
+          </div>
           <div>
             <button className="secondary small-button" type="button" onClick={() => setAll('PRESENT')}>전체 참석</button>
             <button className="secondary small-button" type="button" onClick={() => setAll('ABSENT')}>전체 불참</button>
           </div>
         </div>
+        <p className="attendance-guide">참석 여부와 당일 출전팀을 선택하세요.</p>
         <div className="card attendance-list">
           {data.members.map(member => {
             const isPresent = member.attendanceStatus === 'PRESENT'
             const isInvalid = invalidMemberIds.includes(member.leagueMemberId)
-            return <div className={`attendance-row${isInvalid ? ' attendance-row-invalid' : ''}`} key={member.leagueMemberId}>
+            return <div className={`attendance-row${isPresent ? ' attendance-row-present' : ''}${isInvalid ? ' attendance-row-invalid' : ''}`} key={member.leagueMemberId}>
               <label className="attendance-check">
                 <input type="checkbox" checked={isPresent} onChange={() => toggleAttendance(member.leagueMemberId)} />
                 <span>
                   <b>{member.name}</b>
-                  <small>{member.membershipType === 'REGULAR' ? '정회원' : '게스트'} · 기본팀 {member.teamName || '없음'}</small>
+                  <small className={member.membershipType === 'REGULAR' ? '' : 'guest-text'}>{member.membershipType === 'REGULAR' ? '정회원' : '게스트'}</small>
                 </span>
               </label>
               <div className="attendance-team-field">
-                <label className="sr-only" htmlFor={`actual-team-${member.leagueMemberId}`}>{member.name} 당일 출전팀</label>
+                <label className="sr-only" htmlFor={`actual-team-${member.leagueMemberId}`}>{member.name} 출전팀</label>
                 <select id={`actual-team-${member.leagueMemberId}`} value={member.actualTeamId || ''} disabled={!isPresent} aria-invalid={isInvalid} onChange={e => updateActualTeam(member.leagueMemberId, e.target.value)}>
                   <option value="">미배정</option>
                   {data.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
@@ -175,7 +180,10 @@ export default function AdminAttendancePage() {
             </div>
           })}
         </div>
-        <button className="primary full attendance-save" type="button" disabled={saving} onClick={save}>{saving ? '저장 중...' : '출석 저장'}</button>
+        <div className="attendance-save-bar">
+          <span>참석 {presentCount} / {data.members.length}</span>
+          <button className="primary" type="button" disabled={saving} onClick={save}>{saving ? '저장 중...' : '저장'}</button>
+        </div>
         {message && <p className="success">{message}</p>}
       </>}
     </>}
