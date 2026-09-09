@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   const leagueId = id(req.params.leagueId); if (!leagueId) return res.status(400).json({ message: 'Invalid league id' });
   try {
     if (!(await pool.query('SELECT 1 FROM league WHERE id=$1', [leagueId])).rowCount) return res.status(404).json({ message: 'League not found' });
-    const result = await pool.query(`SELECT t.id,t.league_id AS "leagueId",t.name,t.sort_order AS "sortOrder",COUNT(lm.id)::int AS "memberCount",
+    const result = await pool.query(`SELECT t.id,t.league_id AS "leagueId",t.name,t.sort_order AS "sortOrder",COUNT(m.id)::int AS "memberCount",
       COALESCE(json_agg(json_build_object('memberId',m.id,'name',m.name,'memberType',m.grade) ORDER BY m.name) FILTER (WHERE m.id IS NOT NULL),'[]') AS members
       FROM team t LEFT JOIN league_member lm ON lm.team_id=t.id LEFT JOIN member m ON m.id=lm.member_id AND m.is_active=TRUE
       WHERE t.league_id=$1 GROUP BY t.id ORDER BY t.sort_order,t.id`, [leagueId]);
