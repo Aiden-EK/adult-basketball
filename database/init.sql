@@ -61,10 +61,13 @@ CREATE TABLE IF NOT EXISTS attendance (
     id BIGSERIAL PRIMARY KEY,
     game_day_id BIGINT NOT NULL REFERENCES game_day(id) ON DELETE RESTRICT,
     member_id BIGINT NOT NULL REFERENCES member(id) ON DELETE RESTRICT,
-    actual_team_id BIGINT NOT NULL REFERENCES team(id) ON DELETE RESTRICT,
+    league_member_id BIGINT NOT NULL REFERENCES league_member(id) ON DELETE RESTRICT,
+    actual_team_id BIGINT REFERENCES team(id) ON DELETE RESTRICT,
     grade_snapshot VARCHAR(20) NOT NULL CHECK (grade_snapshot IN ('REGULAR', 'GUEST')),
+    status VARCHAR(20) NOT NULL DEFAULT 'PRESENT' CHECK (status IN ('PRESENT', 'ABSENT')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_attendance_game_day_member UNIQUE (game_day_id, member_id)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_attendance_game_day_league_member UNIQUE (game_day_id, league_member_id)
 );
 
 CREATE TABLE IF NOT EXISTS game (
@@ -105,16 +108,6 @@ CREATE TABLE IF NOT EXISTS game_player_score (
     CONSTRAINT uq_game_player_score_game_member UNIQUE (game_id, league_member_id)
 );
 
-CREATE TABLE IF NOT EXISTS game_attendance (
-    id BIGSERIAL PRIMARY KEY,
-    game_id BIGINT NOT NULL REFERENCES game(id) ON DELETE RESTRICT,
-    league_member_id BIGINT NOT NULL REFERENCES league_member(id) ON DELETE RESTRICT,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('PRESENT', 'ABSENT')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_game_attendance_game_member UNIQUE (game_id, league_member_id)
-);
-CREATE INDEX IF NOT EXISTS idx_game_attendance_game_id ON game_attendance(game_id);
 
 CREATE TABLE IF NOT EXISTS admin_account (
     id BIGSERIAL PRIMARY KEY,

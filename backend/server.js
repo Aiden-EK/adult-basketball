@@ -78,7 +78,7 @@ app.use('/api/leagues/:leagueId/standings', leagueStandingsRouter);
 app.use('/api/leagues/:leagueId/scorers', leaguePlayerStandingsRouter);
 app.use('/api/leagues/:leagueId/winner', leagueWinnerRouter);
 app.use('/api/admin/games', playerScoresRouter);
-app.use('/api/admin/games', adminAttendanceRouter);
+app.use('/api/admin/leagues/:leagueId/attendance', adminAttendanceRouter);
 app.use('/api/games', playerScoresRouter);
 
 app.use('/api', (_req, res) => {

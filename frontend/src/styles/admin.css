@@ -48,4 +48,7 @@
 .attendance-toggle .selected-present { background:var(--mint); color:var(--green); }
 .attendance-toggle .selected-absent { background:#f0f2f1; color:var(--ink); }
 .attendance-hint { margin:8px 0 0; text-align:center; font-size:12px; }
+.attendance-games { margin:12px 0; padding:12px 14px; box-shadow:none; }
+.attendance-games small { margin-bottom:4px; }
+.attendance-games p { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
 @media (max-width:359px) { .attendance-toolbar { align-items:flex-start; flex-direction:column; } }

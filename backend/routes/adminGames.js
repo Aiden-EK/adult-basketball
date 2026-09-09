@@ -13,7 +13,7 @@ function validate(input) {
   if (input.status === 'SCHEDULED' && (input.homeScore !== null || input.awayScore !== null)) return '예정 경기에는 점수를 입력할 수 없습니다.';
   return null;
 }
-const fields = `g.id AS "gameId", gd.league_id AS "leagueId", g.game_no AS "gameNo", g.scheduled_at AS "scheduledAt", g.status, g.team_a_id AS "homeTeamId", home.name AS "homeTeamName", g.team_b_id AS "awayTeamId", away.name AS "awayTeamName", g.team_a_score AS "homeScore", g.team_b_score AS "awayScore", g.created_at AS "createdAt", g.updated_at AS "updatedAt"`;
+const fields = `g.id AS "gameId", gd.league_id AS "leagueId", gd.game_date AS "gameDate", g.game_no AS "gameNo", g.scheduled_at AS "scheduledAt", g.status, g.team_a_id AS "homeTeamId", home.name AS "homeTeamName", g.team_b_id AS "awayTeamId", away.name AS "awayTeamName", g.team_a_score AS "homeScore", g.team_b_score AS "awayScore", g.created_at AS "createdAt", g.updated_at AS "updatedAt"`;
 const joins = 'FROM game g JOIN game_day gd ON gd.id = g.game_day_id JOIN team home ON home.id = g.team_a_id JOIN team away ON away.id = g.team_b_id';
 
 async function teamsBelong(client, leagueId, homeTeamId, awayTeamId) {

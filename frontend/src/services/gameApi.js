@@ -7,5 +7,6 @@ export const deleteAdminGame = (leagueId, gameId) => apiRequest(`/admin/leagues/
 export const getAdminPlayerScores = gameId => apiRequest(`/admin/games/${gameId}/player-scores`)
 export const saveAdminPlayerScores = (gameId, scores) => apiRequest(`/admin/games/${gameId}/player-scores`, { method: 'PUT', body: JSON.stringify({ scores }) })
 export const getPlayerScores = gameId => apiRequest(`/games/${gameId}/player-scores`)
-export const getAdminGameAttendance = gameId => apiRequest(`/admin/games/${gameId}/attendance`)
-export const saveAdminGameAttendance = (gameId, attendance) => apiRequest(`/admin/games/${gameId}/attendance`, { method: 'PUT', body: JSON.stringify({ attendance }) })
+export const getAdminAttendanceDates = leagueId => apiRequest(`/admin/leagues/${leagueId}/attendance/dates`)
+export const getAdminLeagueAttendance = (leagueId, date) => apiRequest(`/admin/leagues/${leagueId}/attendance?date=${encodeURIComponent(date)}`)
+export const saveAdminLeagueAttendance = (leagueId, date, attendance) => apiRequest(`/admin/leagues/${leagueId}/attendance/${date}`, { method: 'PUT', body: JSON.stringify({ attendance }) })
