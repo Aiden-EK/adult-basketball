@@ -5,16 +5,12 @@ import { getLeagues } from '../../services/leagueApi'
 import { getAdminLeagueTeams } from '../../services/teamApi'
 import { createAdminGameSet, deleteAdminGame, getAdminLeagueGames, updateAdminGame, getAdminPlayerScores, saveAdminPlayerScores } from '../../services/gameApi'
 
-const blank = { homeTeamId: '', awayTeamId: '', scheduledAt: '', status: 'SCHEDULED', homeScore: '', awayScore: '' }
+const blank = { homeTeamId: '', awayTeamId: '', gameDate: '', status: 'SCHEDULED', homeScore: '', awayScore: '' }
 const blankSet = { gameDate: '', status: 'SCHEDULED' }
 const resultTypeLabels = { NORMAL: '정상 경기', TIEBREAK: '동점 후 승부결정', FORFEIT: '몰수 경기' }
 const normalizedGameDate = value => String(value || '').slice(0, 10)
-const editDateTime = game => {
-  const date = normalizedGameDate(game.gameDate)
-  return date ? `${date}T00:00` : ''
-}
 const gameDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '일시 미정'
-const displayGameDate = game => game.scheduledAt ? new Date(game.scheduledAt).toLocaleString('ko-KR') : gameDate(game.gameDate)
+const displayGameDate = game => gameDate(game.gameDate)
 const valuesFromScores = data => Object.fromEntries(data.teams.flatMap(team => team.players.filter(player => player.hasScore).map(player => [player.leagueMemberId, player.points])))
 
 function DifferenceStatus({ total, gameScore, required }) {
@@ -54,15 +50,15 @@ export default function AdminGamesPage() {
   const changeLeague = value => { setGames(null); setLeagueId(value); setScoresGame(null); load(value) }
   const edit = game => {
     setEditing(game.gameId)
-    // game_date는 PostgreSQL DATE일 수 있으므로 시간대 변환 없이 YYYY-MM-DD로 사용한다.
-    setForm({ homeTeamId: String(game.homeTeamId), awayTeamId: String(game.awayTeamId), scheduledAt: editDateTime(game), status: 'COMPLETED', homeScore: game.homeScore ?? '', awayScore: game.awayScore ?? '' })
+    // game_date는 PostgreSQL DATE이므로 시간대 변환 없이 YYYY-MM-DD로 사용한다.
+    setForm({ homeTeamId: String(game.homeTeamId), awayTeamId: String(game.awayTeamId), gameDate: normalizedGameDate(game.gameDate), status: 'COMPLETED', homeScore: game.homeScore ?? '', awayScore: game.awayScore ?? '' })
   }
   const reset = () => { setEditing(null); setForm(blank) }
 
   async function save(event) {
     event.preventDefault()
     setError('')
-    const data = { ...form, homeTeamId: Number(form.homeTeamId), awayTeamId: Number(form.awayTeamId), scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null, homeScore: form.status === 'COMPLETED' ? Number(form.homeScore) : null, awayScore: form.status === 'COMPLETED' ? Number(form.awayScore) : null }
+    const data = { ...form, homeTeamId: Number(form.homeTeamId), awayTeamId: Number(form.awayTeamId), homeScore: form.status === 'COMPLETED' ? Number(form.homeScore) : null, awayScore: form.status === 'COMPLETED' ? Number(form.awayScore) : null }
     try {
       await updateAdminGame(leagueId, editing, data)
       setMessage('경기를 수정했습니다.')
@@ -133,11 +129,10 @@ export default function AdminGamesPage() {
       <h3>경기 수정</h3>
       <label>팀 1<select value={form.homeTeamId} onChange={event => change('homeTeamId', event.target.value)} required><option value="">선택</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label>팀 2<select value={form.awayTeamId} onChange={event => change('awayTeamId', event.target.value)} required><option value="">선택</option>{teams.filter(team => String(team.id) !== String(form.homeTeamId)).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
-      <label className="game-date-field">경기 일시<input type="datetime-local" value={form.scheduledAt} onChange={event => change('scheduledAt', event.target.value)} /></label>
+      <label className="game-date-field">경기 날짜<input type="date" value={form.gameDate} onChange={event => change('gameDate', event.target.value)} required /></label>
       <label className="game-status-field">상태<select value={form.status} onChange={event => change('status', event.target.value)}><option value="SCHEDULED">예정</option><option value="COMPLETED">종료</option></select></label>
       {form.status === 'COMPLETED' && <div className="score-fields"><label>팀 1 점수<input type="number" min="0" value={form.homeScore} onChange={event => change('homeScore', event.target.value)} required /></label><label>팀 2 점수<input type="number" min="0" value={form.awayScore} onChange={event => change('awayScore', event.target.value)} required /></label></div>}
-      <button className="primary game-submit" disabled={!teams.length}>수정 저장</button>
-      <button type="button" className="secondary" onClick={reset}>취소</button>
+      <div className="game-actions"><button type="button" className="secondary" onClick={reset}>취소</button><button className="primary" disabled={!teams.length}>수정 저장</button></div>
     </form>
     }
 

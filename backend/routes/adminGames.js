@@ -94,8 +94,13 @@ router.patch('/:gameId', async (req, res) => {
   const current = await pool.query('SELECT g.* FROM game g JOIN game_day gd ON gd.id = g.game_day_id WHERE g.id = $1 AND gd.league_id = $2', [gameId, leagueId]); if (!current.rowCount) return res.status(404).json({ message: 'Game not found' });
   const old = current.rows[0]; const homeTeamId = req.body?.homeTeamId === undefined ? Number(old.team_a_id) : id(req.body.homeTeamId); const awayTeamId = req.body?.awayTeamId === undefined ? Number(old.team_b_id) : id(req.body.awayTeamId); const status = req.body?.status || old.status; const homeScore = req.body?.homeScore === undefined ? old.team_a_score : score(req.body.homeScore); const awayScore = req.body?.awayScore === undefined ? old.team_b_score : score(req.body.awayScore); const errorMessage = validate({ leagueId, homeTeamId, awayTeamId, status, homeScore, awayScore }); if (errorMessage) return res.status(400).json({ message: errorMessage });
   if (!(await teamsBelong(pool, leagueId, homeTeamId, awayTeamId))) return res.status(400).json({ message: '양 팀은 해당 리그에 속해야 합니다.' });
-  const scheduledAt = req.body?.scheduledAt === undefined ? old.scheduled_at : (req.body.scheduledAt || null);
-  try { await pool.query('UPDATE game SET team_a_id=$1, team_b_id=$2, team_a_score=$3, team_b_score=$4, status=$5, scheduled_at=$6, updated_at=CURRENT_TIMESTAMP WHERE id=$7', [homeTeamId, awayTeamId, homeScore, awayScore, status, scheduledAt, gameId]); const result = await pool.query(`SELECT ${fields} ${joins} WHERE g.id = $1`, [gameId]); res.json(result.rows[0]); } catch (error) { console.error(error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
+  const date = req.body?.gameDate === undefined ? null : gameDate(req.body.gameDate);
+  if (req.body?.gameDate !== undefined && !date) return res.status(400).json({ message: '경기 날짜 형식이 올바르지 않습니다.' });
+  try {
+    if (date) await pool.query('UPDATE game_day SET game_date=$1 WHERE id=$2', [date, old.game_day_id]);
+    await pool.query('UPDATE game SET team_a_id=$1, team_b_id=$2, team_a_score=$3, team_b_score=$4, status=$5, scheduled_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=$6', [homeTeamId, awayTeamId, homeScore, awayScore, status, gameId]);
+    const result = await pool.query(`SELECT ${fields} ${joins} WHERE g.id = $1`, [gameId]); res.json(result.rows[0]);
+  } catch (error) { console.error(error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
 
 router.delete('/:gameId', async (req, res) => { const leagueId = id(req.params.leagueId); const gameId = id(req.params.gameId); if (!leagueId || !gameId) return res.status(400).json({ message: 'Invalid game id' }); try { const result = await pool.query('DELETE FROM game g USING game_day gd WHERE g.game_day_id = gd.id AND g.id = $1 AND gd.league_id = $2', [gameId, leagueId]); if (!result.rowCount) return res.status(404).json({ message: 'Game not found' }); res.status(204).send(); } catch (error) { console.error(error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); } });
