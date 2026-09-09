@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
     const members = await pool.query(`SELECT lm.id AS "leagueMemberId", m.id AS "memberId", m.name, m.grade AS "membershipType", lm.team_id AS "teamId", t.name AS "teamName", a.status AS "attendanceStatus"
       FROM league_member lm JOIN member m ON m.id=lm.member_id LEFT JOIN team t ON t.id=lm.team_id
       LEFT JOIN attendance a ON a.game_day_id=$1 AND a.league_member_id=lm.id
-      WHERE lm.league_id=$2 ORDER BY m.name, m.id`, [day.rows[0].id, leagueId]);
+      WHERE lm.league_id=$2 AND m.is_active=TRUE ORDER BY m.name, m.id`, [day.rows[0].id, leagueId]);
     res.json({ leagueId, attendanceDate, games: games.rows, members: members.rows });
   } catch (error) { console.error('Attendance read failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });

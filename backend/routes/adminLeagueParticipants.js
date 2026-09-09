@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
              (lm.id IS NOT NULL) AS "isParticipant", lm.id AS "participantId", lm.team_id AS "teamId"
       FROM member m
       LEFT JOIN league_member lm ON lm.member_id = m.id AND lm.league_id = $1
+      WHERE m.is_active = TRUE
       ORDER BY m.id
     `, [leagueId]);
     res.json(result.rows);
