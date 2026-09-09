@@ -18,6 +18,8 @@ const allTabs = [...new Set([...activeTabs, ...completedTabs].map(([key]) => key
 const formatDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정'
 const isWinner = (game, teamId) => game.status === 'COMPLETED' && Number(game.winnerTeamId) === Number(teamId)
 const gameDateKey = game => String(game.gameDate || '').slice(0, 10)
+const attendanceTeamOrder = ['블랙', '화이트', '컬러']
+const attendanceNameCollator = new Intl.Collator('ko-KR')
 
 function groupGamesByDate(games) {
   const groups = new Map()
@@ -37,6 +39,26 @@ function dateStatus(games) {
   return '진행 중'
 }
 
+function groupAttendeesByTeam(attendees) {
+  const groups = new Map()
+  attendees.forEach(attendee => {
+    const teamName = attendee.teamName || '기타'
+    if (!groups.has(teamName)) groups.set(teamName, { teamName, members: [], guests: [] })
+    groups.get(teamName)[attendee.type === 'GUEST' ? 'guests' : 'members'].push(attendee)
+  })
+  const sortByName = (left, right) => attendanceNameCollator.compare(left.name, right.name) || Number(left.id) - Number(right.id)
+  return [...groups.values()]
+    .map(group => ({ ...group, members: group.members.sort(sortByName), guests: group.guests.sort(sortByName) }))
+    .sort((left, right) => {
+      const leftOrder = attendanceTeamOrder.indexOf(left.teamName)
+      const rightOrder = attendanceTeamOrder.indexOf(right.teamName)
+      if (leftOrder !== -1 || rightOrder !== -1) return (leftOrder === -1 ? attendanceTeamOrder.length : leftOrder) - (rightOrder === -1 ? attendanceTeamOrder.length : rightOrder)
+      if (left.teamName === '기타') return 1
+      if (right.teamName === '기타') return -1
+      return attendanceNameCollator.compare(left.teamName, right.teamName)
+    })
+}
+
 function AttendanceSection({ summary, detail, expanded, onToggle }) {
   if (!summary?.isRegistered) return <div className="game-day-attendance"><div className="attendance-summary"><span className="attendance-empty">출석 미등록</span></div></div>
   return <div className="game-day-attendance">
@@ -49,8 +71,14 @@ function AttendanceSection({ summary, detail, expanded, onToggle }) {
       : detail === null
         ? <p className="attendance-error">참석자 정보를 불러오지 못했습니다.</p>
         : <div className="attendance-details">
-          {detail.memberCount > 0 && <section><h4><span>정회원</span><b>{detail.memberCount}명</b></h4>{detail.attendees.filter(attendee => attendee.type === 'MEMBER').map(attendee => <p key={`member-${attendee.id}`}><b>{attendee.name}</b>{attendee.teamName && <span>{attendee.teamName}</span>}</p>)}</section>}
-          {detail.guestCount > 0 && <section><h4><span>게스트</span><b>{detail.guestCount}명</b></h4>{detail.attendees.filter(attendee => attendee.type === 'GUEST').map(attendee => <p key={`guest-${attendee.id}`}><b>{attendee.name}</b><span>게스트</span></p>)}</section>}
+          {groupAttendeesByTeam(detail.attendees).map(group => <div className="attendance-team-row" key={group.teamName}>
+            <b className="attendance-team-name">{group.teamName}</b>
+            <div className="attendance-team-members">
+              {group.members.map(attendee => <span className="attendance-member" key={`member-${attendee.id}`}>{attendee.name}</span>)}
+              {group.members.length > 0 && group.guests.length > 0 && <i className="attendance-member-divider" aria-hidden="true">/</i>}
+              {group.guests.map(attendee => <span className="attendance-member attendance-guest" key={`guest-${attendee.id}`}>{attendee.name}</span>)}
+            </div>
+          </div>)}
           {detail.totalCount === 0 && <p className="attendance-none">참석자가 없습니다.</p>}
         </div>)}
   </div>
