@@ -42,6 +42,39 @@ router.get('/summary', async (req, res) => {
   }
 });
 
+router.get('/rates', async (req, res) => {
+  const leagueId = id(req.params.leagueId);
+  if (!leagueId) return res.status(400).json({ message: '유효한 리그 ID가 필요합니다.' });
+  try {
+    if (!(await leagueExists(leagueId))) return res.status(404).json({ message: '리그를 찾을 수 없습니다.' });
+    const result = await pool.query(`
+      WITH attendance_days AS (
+        SELECT gd.id FROM game_day gd
+        WHERE gd.league_id = $1 AND EXISTS (SELECT 1 FROM attendance a WHERE a.game_day_id = gd.id)
+      )
+      SELECT lm.member_id AS "memberId", lm.team_id AS "teamId", t.name AS "teamName", m.name, m.grade AS "memberType",
+        COUNT(a.id) FILTER (WHERE a.status = 'PRESENT')::int AS "attendanceCount",
+        (SELECT COUNT(*) FROM attendance_days)::int AS "totalAttendanceDays"
+      FROM league_member lm
+      JOIN member m ON m.id = lm.member_id
+      LEFT JOIN team t ON t.id = lm.team_id
+      LEFT JOIN attendance a ON a.league_member_id = lm.id AND a.game_day_id IN (SELECT id FROM attendance_days)
+      WHERE lm.league_id = $1 AND m.is_active = TRUE
+      GROUP BY lm.member_id, lm.team_id, t.name, m.name, m.grade
+      ORDER BY m.name, lm.member_id
+    `, [leagueId]);
+    const participants = result.rows.map(row => {
+      const attendanceCount = Number(row.attendanceCount);
+      const totalAttendanceDays = Number(row.totalAttendanceDays);
+      return { ...row, attendanceCount, totalAttendanceDays, attendanceRate: totalAttendanceDays ? Number(((attendanceCount / totalAttendanceDays) * 100).toFixed(1)) : 0 };
+    });
+    res.json({ leagueId, totalAttendanceDays: participants[0]?.totalAttendanceDays || 0, participants });
+  } catch (error) {
+    console.error('League attendance rates query failed:', error);
+    res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+  }
+});
+
 router.get('/', async (req, res) => {
   const leagueId = id(req.params.leagueId);
   const attendanceDate = validDate(req.query.date);
