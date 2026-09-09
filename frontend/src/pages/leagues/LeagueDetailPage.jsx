@@ -17,6 +17,25 @@ const completedTabs = [['winner', '우승팀'], ['standings', '최종 순위'], 
 const allTabs = [...new Set([...activeTabs, ...completedTabs].map(([key]) => key))]
 const formatDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정'
 const isWinner = (game, teamId) => game.status === 'COMPLETED' && Number(game.winnerTeamId) === Number(teamId)
+const gameDateKey = game => String(game.gameDate || '').slice(0, 10)
+
+function groupGamesByDate(games) {
+  const groups = new Map()
+  games.forEach(game => {
+    const date = gameDateKey(game)
+    if (!groups.has(date)) groups.set(date, [])
+    groups.get(date).push(game)
+  })
+  return [...groups.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([date, dateGames]) => ({ date, games: dateGames.sort((left, right) => Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId)) }))
+}
+
+function dateStatus(games) {
+  if (games.every(game => game.status === 'COMPLETED')) return '종료'
+  if (games.every(game => game.status !== 'COMPLETED')) return '예정'
+  return '진행 중'
+}
 
 function ScorersList({ scorers }) {
   if (scorers.every(player => player.totalPoints === 0 && player.gamesScored === 0)) return <EmptyState text="아직 개인 득점 기록이 없습니다." />
@@ -54,22 +73,23 @@ export default function LeagueDetailPage() {
   const content = tab === 'standings'
     ? standings === null ? <Loading /> : <StandingsList standings={standings} />
     : tab === 'games'
-      ? games === null ? <Loading /> : games.length === 0 ? <EmptyState text="등록된 경기가 없습니다." /> : <div className="game-list">{games.map(game => {
-        const expanded = scores[game.gameId]
-        const homeWon = isWinner(game, game.homeTeam.id)
-        const awayWon = isWinner(game, game.awayTeam.id)
-        return <article className="card game-card" key={game.gameId}>
-          <div className="game-card-head"><b>{game.gameNo}경기</b><span className={`game-status ${game.status === 'COMPLETED' ? '' : 'scheduled'}`}>{game.status === 'COMPLETED' ? '종료' : '예정'}</span></div>
-          <div className="game-match">
-            <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
-            {game.status === 'COMPLETED' ? <b className="game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b> : <b className="game-vs">VS</b>}
-            <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
-          </div>
-          <div className="game-date">{formatDate(game.gameDate)}</div>
-          {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={Boolean(expanded)} onClick={() => showScores(game.gameId)}>개인 득점 보기 <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>}
-          {expanded && <div className="score-details">{expanded.teams.map(team => <div className="score-team" key={team.teamId}><h4>{team.teamName}</h4>{team.players.filter(p => p.hasScore).map(p => <p key={p.leagueMemberId}><b>{p.name}</b><span>{p.points}점</span></p>)}{team.players.every(p => !p.hasScore) && <p className="muted">개인 득점 기록이 아직 입력되지 않았습니다.</p>}</div>)}</div>}
-        </article>
-      })}</div>
+      ? games === null ? <Loading /> : games.length === 0 ? <EmptyState text="등록된 경기가 없습니다." /> : <div className="game-list">{groupGamesByDate(games).map(group => <article className="card game-day-card" key={group.date}>
+        <div className="game-day-head"><h3>{formatDate(group.date)}</h3><span className={`game-status ${dateStatus(group.games) === '종료' ? '' : 'scheduled'}`}>{dateStatus(group.games)}</span></div>
+        <div className="game-day-rows">{group.games.map(game => {
+          const expanded = scores[game.gameId]
+          const homeWon = isWinner(game, game.homeTeam.id)
+          const awayWon = isWinner(game, game.awayTeam.id)
+          return <section className="game-row" key={game.gameId}>
+            <div className="game-row-main"><b className="game-number">{game.gameNo}경기</b><div className="game-match">
+              <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
+              {game.status === 'COMPLETED' ? <b className="game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b> : <b className="game-vs">VS</b>}
+              <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
+            </div><span className={`game-row-status ${game.status === 'COMPLETED' ? '' : 'scheduled'}`}>{game.status === 'COMPLETED' ? '종료' : '예정'}</span></div>
+            {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={Boolean(expanded)} onClick={() => showScores(game.gameId)}>개인 득점 보기 <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>}
+            {expanded && <div className="score-details">{expanded.teams.map(team => <div className="score-team" key={team.teamId}><h4>{team.teamName}</h4>{team.players.filter(p => p.hasScore).map(p => <p key={p.leagueMemberId}><b>{p.name}</b><span>{p.points}점</span></p>)}{team.players.every(p => !p.hasScore) && <p className="muted">개인 득점 기록이 아직 입력되지 않았습니다.</p>}</div>)}</div>}
+          </section>
+        })}</div>
+      </article>)}</div>
       : tab === 'scorers'
         ? scorers === null ? <Loading /> : <ScorersList scorers={scorers} />
         : tab === 'winner'
