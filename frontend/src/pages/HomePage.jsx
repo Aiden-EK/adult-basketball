@@ -12,7 +12,13 @@ import '../styles/home.css'
 const gameTime = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).getTime()
 const compareGames = (left, right) => gameTime(left) - gameTime(right) || Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId)
 const formatDate = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
-const isWinner = (game, teamId) => game?.status === 'COMPLETED' && Number(game.winnerTeamId) === Number(teamId)
+const isWinner = (game, teamId) => {
+  if (game?.status !== 'COMPLETED' || game.homeScore == null || game.awayScore == null) return false
+  const homeScore = Number(game.homeScore)
+  const awayScore = Number(game.awayScore)
+  if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore) || homeScore === awayScore) return false
+  return homeScore > awayScore ? Number(teamId) === Number(game.homeTeam.id) : Number(teamId) === Number(game.awayTeam.id)
+}
 
 function FeaturedGame({ label, game, emptyText }) {
   const homeWon = isWinner(game, game?.homeTeam.id)
