@@ -21,6 +21,50 @@ async function teamsBelong(client, leagueId, homeTeamId, awayTeamId) {
   return result.rows[0].count === 2;
 }
 
+function gameDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : null;
+}
+
+router.post('/set', async (req, res) => {
+  const leagueId = id(req.params.leagueId);
+  const date = gameDate(req.body?.gameDate);
+  const status = req.body?.status || 'SCHEDULED';
+  if (!leagueId || !date) return res.status(400).json({ message: '경기 날짜 형식이 올바르지 않습니다.' });
+  if (!['SCHEDULED', 'COMPLETED'].includes(status)) return res.status(400).json({ message: '유효하지 않은 경기 상태입니다.' });
+  if (status !== 'SCHEDULED') return res.status(400).json({ message: '경기 세트는 예정 상태로만 추가할 수 있습니다.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const league = await client.query('SELECT id FROM league WHERE id = $1 FOR UPDATE', [leagueId]);
+    if (!league.rowCount) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'League not found' }); }
+    const teams = await client.query("SELECT id, name FROM team WHERE league_id = $1 AND name IN ('블랙', '화이트', '컬러')", [leagueId]);
+    const teamIds = Object.fromEntries(teams.rows.map(team => [team.name, team.id]));
+    if (!teamIds['블랙'] || !teamIds['화이트'] || !teamIds['컬러']) { await client.query('ROLLBACK'); return res.status(400).json({ message: '블랙 / 화이트 / 컬러 팀 구성이 완료되지 않았습니다.' }); }
+    const existingDay = await client.query('SELECT id FROM game_day WHERE league_id = $1 AND game_date = $2 FOR UPDATE', [leagueId, date]);
+    if (existingDay.rowCount) {
+      const existingGames = await client.query('SELECT 1 FROM game WHERE game_day_id = $1 LIMIT 1', [existingDay.rows[0].id]);
+      if (existingGames.rowCount) { await client.query('ROLLBACK'); return res.status(409).json({ message: '해당 날짜의 경기 세트가 이미 존재합니다.' }); }
+    }
+    const day = existingDay.rowCount
+      ? existingDay.rows[0]
+      : (await client.query('INSERT INTO game_day (league_id, game_date) VALUES ($1, $2) RETURNING id', [leagueId, date])).rows[0];
+    const games = [[1, '블랙', '컬러'], [2, '블랙', '화이트'], [3, '화이트', '컬러']];
+    const createdIds = [];
+    for (const [gameNo, home, away] of games) {
+      const created = await client.query('INSERT INTO game (game_day_id, game_no, team_a_id, team_b_id, status) VALUES ($1, $2, $3, $4, $5) RETURNING id', [day.id, gameNo, teamIds[home], teamIds[away], status]);
+      createdIds.push(created.rows[0].id);
+    }
+    await client.query('COMMIT');
+    const result = await pool.query(`SELECT ${fields} ${joins} WHERE g.id = ANY($1::bigint[]) ORDER BY g.game_no`, [createdIds]);
+    res.status(201).json(result.rows);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error.code === '23505') return res.status(409).json({ message: '해당 날짜의 경기 세트가 이미 존재합니다.' });
+    console.error(error); return res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+  } finally { client.release(); }
+});
+
 router.get('/', async (req, res) => {
   const leagueId = id(req.params.leagueId);
   if (!leagueId) return res.status(400).json({ message: 'Invalid league id' });

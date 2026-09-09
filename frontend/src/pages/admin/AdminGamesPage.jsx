@@ -3,12 +3,14 @@ import PageTitle from '../../components/PageTitle'
 import { ErrorMessage, Loading } from '../../components/Status'
 import { getLeagues } from '../../services/leagueApi'
 import { getAdminLeagueTeams } from '../../services/teamApi'
-import { createAdminGame, deleteAdminGame, getAdminLeagueGames, updateAdminGame, getAdminPlayerScores, saveAdminPlayerScores } from '../../services/gameApi'
+import { createAdminGameSet, deleteAdminGame, getAdminLeagueGames, updateAdminGame, getAdminPlayerScores, saveAdminPlayerScores } from '../../services/gameApi'
 
 const blank = { homeTeamId: '', awayTeamId: '', scheduledAt: '', status: 'SCHEDULED', homeScore: '', awayScore: '' }
+const blankSet = { gameDate: '', status: 'SCHEDULED' }
 const resultTypeLabels = { NORMAL: '정상 경기', TIEBREAK: '동점 후 승부결정', FORFEIT: '몰수 경기' }
 const localDate = value => value ? new Date(value).toISOString().slice(0, 16) : ''
-const gameDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR') : '날짜 미정'
+const gameDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '일시 미정'
+const displayGameDate = game => game.scheduledAt ? new Date(game.scheduledAt).toLocaleString('ko-KR') : gameDate(game.gameDate)
 const valuesFromScores = data => Object.fromEntries(data.teams.flatMap(team => team.players.filter(player => player.hasScore).map(player => [player.leagueMemberId, player.points])))
 
 function DifferenceStatus({ total, gameScore, required }) {
@@ -24,6 +26,7 @@ export default function AdminGamesPage() {
   const [teams, setTeams] = useState([])
   const [games, setGames] = useState(null)
   const [form, setForm] = useState(blank)
+  const [scheduleForm, setScheduleForm] = useState(blankSet)
   const [editing, setEditing] = useState(null)
   const [scoresGame, setScoresGame] = useState(null)
   const [scoreValues, setScoreValues] = useState({})
@@ -56,10 +59,21 @@ export default function AdminGamesPage() {
     setError('')
     const data = { ...form, homeTeamId: Number(form.homeTeamId), awayTeamId: Number(form.awayTeamId), scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null, homeScore: form.status === 'COMPLETED' ? Number(form.homeScore) : null, awayScore: form.status === 'COMPLETED' ? Number(form.awayScore) : null }
     try {
-      if (editing) await updateAdminGame(leagueId, editing, data)
-      else await createAdminGame(leagueId, data)
-      setMessage(editing ? '경기를 수정했습니다.' : '경기를 추가했습니다.')
+      await updateAdminGame(leagueId, editing, data)
+      setMessage('경기를 수정했습니다.')
       reset()
+      load()
+    } catch (saveError) { setError(saveError.message) }
+  }
+
+  async function createSet(event) {
+    event.preventDefault()
+    setError('')
+    setMessage('')
+    try {
+      await createAdminGameSet(leagueId, scheduleForm)
+      setMessage('3경기 세트를 추가했습니다.')
+      setScheduleForm(blankSet)
       load()
     } catch (saveError) { setError(saveError.message) }
   }
@@ -103,16 +117,24 @@ export default function AdminGamesPage() {
     {error && <ErrorMessage text={error} />}
     <select className="league-select" value={leagueId} onChange={event => changeLeague(event.target.value)}>{leagues.map(league => <option key={league.id} value={league.id}>{league.name}</option>)}</select>
 
-    <form className="card form game-form" onSubmit={save}>
-      <h3>{editing ? '경기 수정' : '경기 추가'}</h3>
+    {!editing && <form className="card form game-form" onSubmit={createSet}>
+      <h3>3경기 세트 추가</h3>
+      <label className="game-date-field">경기 날짜<input type="date" value={scheduleForm.gameDate} onChange={event => setScheduleForm(current => ({ ...current, gameDate: event.target.value }))} required /></label>
+      <label className="game-status-field">상태<select value={scheduleForm.status} onChange={event => setScheduleForm(current => ({ ...current, status: event.target.value }))}><option value="SCHEDULED">예정</option></select></label>
+      <button className="primary game-submit" disabled={!teams.length}>3경기 추가</button>
+    </form>}
+
+    {editing && <form className="card form game-form" onSubmit={save}>
+      <h3>경기 수정</h3>
       <label>홈팀<select value={form.homeTeamId} onChange={event => change('homeTeamId', event.target.value)} required><option value="">선택</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label>원정팀<select value={form.awayTeamId} onChange={event => change('awayTeamId', event.target.value)} required><option value="">선택</option>{teams.filter(team => String(team.id) !== String(form.homeTeamId)).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label className="game-date-field">경기 일시<input type="datetime-local" value={form.scheduledAt} onChange={event => change('scheduledAt', event.target.value)} /></label>
       <label className="game-status-field">상태<select value={form.status} onChange={event => change('status', event.target.value)}><option value="SCHEDULED">예정</option><option value="COMPLETED">종료</option></select></label>
       {form.status === 'COMPLETED' && <div className="score-fields"><label>홈팀 점수<input type="number" min="0" value={form.homeScore} onChange={event => change('homeScore', event.target.value)} required /></label><label>원정팀 점수<input type="number" min="0" value={form.awayScore} onChange={event => change('awayScore', event.target.value)} required /></label></div>}
-      <button className="primary game-submit" disabled={!teams.length}>{editing ? '수정 저장' : '경기 추가'}</button>
-      {editing && <button type="button" className="secondary" onClick={reset}>취소</button>}
+      <button className="primary game-submit" disabled={!teams.length}>수정 저장</button>
+      <button type="button" className="secondary" onClick={reset}>취소</button>
     </form>
+    }
 
     {message && <p className="success">{message}</p>}
     {scoresGame && <section className="card player-score-editor">
@@ -132,6 +154,6 @@ export default function AdminGamesPage() {
       <button className="primary full" type="button" disabled={savingScores} onClick={saveScores}>{savingScores ? '저장 중...' : '개인 득점 저장'}</button>
     </section>}
 
-    {games === null ? <Loading /> : games.length === 0 ? <div className="empty card"><h3>등록된 경기가 없습니다.</h3></div> : <div className="game-list">{games.map(game => <article className="card game-card" key={game.gameId}><div className="game-card-head"><span>{game.status === 'COMPLETED' ? '경기 종료' : '경기 예정'}</span><small>{game.scheduledAt ? new Date(game.scheduledAt).toLocaleString('ko-KR') : '일시 미정'}</small></div><h3>{game.homeTeamName} {game.status === 'COMPLETED' ? `${game.homeScore} : ${game.awayScore}` : 'vs'} {game.awayTeamName}</h3>{game.status === 'COMPLETED' && <button className="secondary small-button" onClick={() => openScores(game)}>개인 득점</button>} <button className="secondary small-button" onClick={() => edit(game)}>수정</button> <button className="secondary small-button" onClick={() => remove(game)}>삭제</button></article>)}</div>}
+    {games === null ? <Loading /> : games.length === 0 ? <div className="empty card"><h3>등록된 경기가 없습니다.</h3></div> : <div className="game-list">{games.map(game => <article className="card game-card" key={game.gameId}><div className="game-card-head"><b>{game.gameNo}경기</b><span>{game.status === 'COMPLETED' ? '경기 종료' : '경기 예정'}</span><small>{displayGameDate(game)}</small></div><h3>{game.homeTeamName} {game.status === 'COMPLETED' ? `${game.homeScore} : ${game.awayScore}` : 'vs'} {game.awayTeamName}</h3>{game.status === 'COMPLETED' && <button className="secondary small-button" onClick={() => openScores(game)}>개인 득점</button>} <button className="secondary small-button" onClick={() => edit(game)}>수정</button> <button className="secondary small-button" onClick={() => remove(game)}>삭제</button></article>)}</div>}
   </>
 }
