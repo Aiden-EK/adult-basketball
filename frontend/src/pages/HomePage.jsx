@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLeagueStandings, getLeagues } from '../services/leagueApi'
-import { getLeagueGames } from '../services/gameApi'
+import { getLeagueAttendance, getLeagueGames } from '../services/gameApi'
 import { ErrorMessage, Loading } from '../components/Status'
 import LeagueStatusBadge from '../components/LeagueStatusBadge'
 import StandingsList from '../components/StandingsList'
@@ -12,6 +12,9 @@ import '../styles/home.css'
 const gameTime = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).getTime()
 const compareGames = (left, right) => gameTime(left) - gameTime(right) || Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId)
 const formatDate = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+const gameDateKey = game => String(game.gameDate || '').slice(0, 10)
+const attendanceTeamOrder = ['블랙', '화이트', '컬러']
+const attendanceNameCollator = new Intl.Collator('ko-KR')
 const isWinner = (game, teamId) => {
   if (game?.status !== 'COMPLETED' || game.homeScore == null || game.awayScore == null) return false
   const homeScore = Number(game.homeScore)
@@ -21,25 +24,49 @@ const isWinner = (game, teamId) => {
 }
 
 function FeaturedGame({ label, game, emptyText }) {
-  const homeWon = isWinner(game, game?.homeTeam.id)
-  const awayWon = isWinner(game, game?.awayTeam.id)
-
   return <article className="home-game card">
     <small>{label}</small>
-    {game ? <>
-      <div>
-        <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
-        {game.status === 'COMPLETED'
-          ? <b className="home-game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b>
-          : <b>VS</b>}
-        <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
-      </div>
-      <span>{formatDate(game)}</span>
-    </> : <p className="muted">{emptyText}</p>}
+    {game ? <p className="next-game-date">{formatDate(game)}</p> : <p className="muted">{emptyText}</p>}
   </article>
 }
 
-function RecentGames({ games }) {
+function groupAttendeesByTeam(attendees) {
+  const groups = new Map()
+  attendees.forEach(attendee => {
+    const teamName = attendee.teamName || '기타'
+    if (!groups.has(teamName)) groups.set(teamName, { teamName, members: [], guests: [] })
+    groups.get(teamName)[attendee.type === 'GUEST' ? 'guests' : 'members'].push(attendee)
+  })
+  const sortByName = (left, right) => attendanceNameCollator.compare(left.name, right.name) || Number(left.id) - Number(right.id)
+  return [...groups.values()]
+    .map(group => ({ ...group, members: group.members.sort(sortByName), guests: group.guests.sort(sortByName) }))
+    .sort((left, right) => {
+      const leftOrder = attendanceTeamOrder.indexOf(left.teamName)
+      const rightOrder = attendanceTeamOrder.indexOf(right.teamName)
+      if (leftOrder !== -1 || rightOrder !== -1) return (leftOrder === -1 ? attendanceTeamOrder.length : leftOrder) - (rightOrder === -1 ? attendanceTeamOrder.length : rightOrder)
+      if (left.teamName === '기타') return 1
+      if (right.teamName === '기타') return -1
+      return attendanceNameCollator.compare(left.teamName, right.teamName)
+    })
+}
+
+function RecentAttendance({ attendance }) {
+  if (attendance === undefined) return null
+  if (!attendance?.isRegistered) return <div className="home-recent-attendance"><span className="attendance-empty">출석 미등록</span></div>
+  return <section className="home-recent-attendance">
+    <div className="home-attendance-summary"><b>참석 {attendance.totalCount}명</b><i>·</i><span>정회원 {attendance.memberCount}</span><i>·</i><span className="attendance-guest">게스트 {attendance.guestCount}</span></div>
+    <div className="home-attendance-details">{groupAttendeesByTeam(attendance.attendees).map(group => <div className="home-attendance-team-row" key={group.teamName}>
+      <b className="attendance-team-name">{group.teamName}</b>
+      <div className="attendance-team-members">
+        {group.members.map(attendee => <span className="attendance-member" key={`member-${attendee.id}`}>{attendee.name}</span>)}
+        {group.members.length > 0 && group.guests.length > 0 && <i className="attendance-member-divider" aria-hidden="true">/</i>}
+        {group.guests.map(attendee => <span className="attendance-member attendance-guest" key={`guest-${attendee.id}`}>{attendee.name}</span>)}
+      </div>
+    </div>)}</div>
+  </section>
+}
+
+function RecentGames({ games, attendance }) {
   if (!games.length) return <article className="home-game card"><small>최근 경기</small><p className="muted">완료된 최근 경기가 없습니다.</p></article>
   return <article className="home-game home-recent-games card">
     <div className="home-game-heading"><small>최근 경기</small><span>{formatDate(games[0])}</span></div>
@@ -52,7 +79,7 @@ function RecentGames({ games }) {
         <b className="home-game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b>
         <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
       </div>
-    })}</div>
+    })}</div><RecentAttendance attendance={attendance} />
   </article>
 }
 
@@ -60,6 +87,7 @@ export default function HomePage() {
   const [league, setLeague] = useState(null)
   const [standings, setStandings] = useState(null)
   const [games, setGames] = useState([])
+  const [recentAttendance, setRecentAttendance] = useState(undefined)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -71,12 +99,15 @@ export default function HomePage() {
       const [standingData, gameData] = await Promise.all([getLeagueStandings(activeLeague.id), getLeagueGames(activeLeague.id)])
       setStandings(standingData.standings)
       setGames(gameData)
+      const completedGames = gameData.filter(game => game.status === 'COMPLETED')
+      const latestCompletedDate = completedGames.map(gameDateKey).sort().at(-1)
+      if (latestCompletedDate) getLeagueAttendance(activeLeague.id, latestCompletedDate).then(setRecentAttendance).catch(() => setRecentAttendance(null))
     }).catch(() => setError('현재 리그 정보를 불러오지 못했습니다.')).finally(() => setLoading(false))
   }, [])
 
   const completedGames = games.filter(game => game.status === 'COMPLETED')
-  const latestCompletedDate = completedGames.map(game => String(game.gameDate).slice(0, 10)).sort().at(-1)
-  const recentGames = completedGames.filter(game => String(game.gameDate).slice(0, 10) === latestCompletedDate).sort((left, right) => Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId))
+  const latestCompletedDate = completedGames.map(gameDateKey).sort().at(-1)
+  const recentGames = completedGames.filter(game => gameDateKey(game) === latestCompletedDate).sort((left, right) => Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId))
   const scheduled = games.filter(game => game.status !== 'COMPLETED').sort(compareGames)[0]
 
   if (loading) return <Loading />
@@ -96,7 +127,7 @@ export default function HomePage() {
     </section>
     <section className="home-section">
       <div className="section-head"><div><small>GAMES</small><h2>리그 경기</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=games`}>전체 보기 →</Link></div>
-      <div className="home-games"><RecentGames games={recentGames} /><FeaturedGame label="다음 경기" game={scheduled} emptyText="다음 경기가 아직 등록되지 않았습니다." /></div>
+      <div className="home-games"><RecentGames games={recentGames} attendance={recentAttendance} /><FeaturedGame label="다음 경기" game={scheduled} emptyText="다음 경기가 아직 등록되지 않았습니다." /></div>
     </section>
     <section className="home-links">
       <Link className="card" to={`/leagues/${league.id}?tab=participants`}><b>팀 · 참가자</b><span>현재 팀 편성 보기 →</span></Link>

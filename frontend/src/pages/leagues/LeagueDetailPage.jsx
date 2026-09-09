@@ -69,7 +69,7 @@ function AttendanceSection({ summary, detail, expanded, onToggle }) {
   if (!summary?.isRegistered) return <div className="game-day-attendance"><div className="attendance-summary"><span className="attendance-empty">출석 미등록</span></div></div>
   return <div className="game-day-attendance">
     <div className="attendance-summary">
-      <span><b>참석 {summary.totalCount}명</b><i>·</i>정회원 {summary.memberCount}<i>·</i>게스트 {summary.guestCount}</span>
+      <span><b>참석 {summary.totalCount}명</b><i>·</i><span>정회원 {summary.memberCount}</span><i>·</i><span className="attendance-guest">게스트 {summary.guestCount}</span></span>
       <button type="button" onClick={onToggle} aria-expanded={expanded}>참석자 {expanded ? '접기' : '보기'} <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>
     </div>
     {expanded && (detail === undefined
