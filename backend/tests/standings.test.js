@@ -92,6 +92,16 @@ const order = standings => standings.map(row => row.teamId);
 }
 
 {
+  const games = [
+    game(1, 2, 10, 5, { gameDate: new Date('2026-08-26T00:00:00Z'), gameNo: 1 }),
+    game(1, 2, 5, 10, { gameDate: new Date('2026-09-02T00:00:00Z'), gameNo: 1 }),
+    game(1, 2, 10, 5, { gameDate: new Date('2026-09-02T00:00:00Z'), gameNo: 3 })
+  ];
+  const result = calculateStandings([team(1), team(2)], games);
+  assert.equal(result.find(row => row.teamId === 1).currentWinStreak, 1, 'DATE 객체도 gameDate와 gameNo 기준으로 현재 연승을 계산해야 한다');
+}
+
+{
   const games = [game(1, 2, 10, 5), game(2, 1, 10, 5), game(1, 2, 10, 5)];
   const result = calculateStandings([team(1, '블랙'), team(2, '화이트')], games);
   const record = result.find(row => row.teamId === 1).headToHead[0];

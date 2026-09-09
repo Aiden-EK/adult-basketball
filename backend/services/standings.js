@@ -43,10 +43,14 @@ function haveSameBaseMetrics(left, right) {
   return compareBaseMetrics(left, right) === 0;
 }
 
+function gameDateTime(value) {
+  if (value instanceof Date) return value.getTime();
+  const dateText = String(value || '').match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  return dateText ? Date.parse(`${dateText}T00:00:00Z`) : 0;
+}
+
 function compareGameOrder(left, right) {
-  const leftDate = left.scheduledAt || left.gameDate || '';
-  const rightDate = right.scheduledAt || right.gameDate || '';
-  return String(leftDate).localeCompare(String(rightDate))
+  return gameDateTime(left.gameDate) - gameDateTime(right.gameDate)
     || Number(left.gameNo || 0) - Number(right.gameNo || 0)
     || Number(left.gameId || 0) - Number(right.gameId || 0);
 }

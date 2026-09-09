@@ -5,16 +5,16 @@ const formatWinRate = value => `${(Number(value) * 100).toFixed(1)}%`
 const formatDifference = value => `${Number(value) > 0 ? '+' : ''}${value}`
 
 export default function StandingsList({ standings }) {
-  const [expandedTeamId, setExpandedTeamId] = useState(null)
+  const [expandedTeamIds, setExpandedTeamIds] = useState(() => new Set(standings.map(team => team.teamId)))
 
   if (standings.length === 0) return <EmptyState text="등록된 팀이 없습니다." />
 
   return <div className="standings-list">
     {standings.map(team => {
-      const expanded = expandedTeamId === team.teamId
+      const expanded = expandedTeamIds.has(team.teamId)
       const detailsId = `standing-details-${team.teamId}`
       return <article className={`standing-card card rank-${team.rank} ${expanded ? 'expanded' : ''}`} key={team.teamId}>
-        <button className="standing-summary" type="button" aria-expanded={expanded} aria-controls={detailsId} aria-label={`${team.teamName} 상세 순위 ${expanded ? '접기' : '펼치기'}`} onClick={() => setExpandedTeamId(expanded ? null : team.teamId)}>
+        <button className="standing-summary" type="button" aria-expanded={expanded} aria-controls={detailsId} aria-label={`${team.teamName} 상세 순위 ${expanded ? '접기' : '펼치기'}`} onClick={() => setExpandedTeamIds(current => { const next = new Set(current); if (expanded) next.delete(team.teamId); else next.add(team.teamId); return next })}>
           <b className="rank-number">{team.rank}</b>
           <span className="standing-team" title={team.teamName}>{team.teamName}</span>
           <span className="standing-record"><b>{team.wins}승 {team.losses}패</b><small>{formatWinRate(team.winRate)}</small></span>
