@@ -95,6 +95,7 @@ export default function HomePage() {
     <section className="home-links">
       <Link className="card" to={`/leagues/${league.id}?tab=participants`}><b>팀 · 참가자</b><span>현재 팀 편성 보기 →</span></Link>
       <Link className="card" to="/leagues"><b>지난 리그</b><span>전체 기록 보기 →</span></Link>
+      <Link className="card champion-link" to="/champions"><b>🏆 역대 우승팀</b><span>분기별 우승 기록 보기 →</span></Link>
     </section>
   </>
 }

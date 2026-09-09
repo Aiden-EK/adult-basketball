@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const { readLeagueChampions } = require('../services/leagueWinner');
 
 const router = express.Router();
 
@@ -35,6 +36,15 @@ router.get('/', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('League list query failed:', error);
+    res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+  }
+});
+
+router.get('/champions', async (_req, res) => {
+  try {
+    res.json(await readLeagueChampions(pool));
+  } catch (error) {
+    console.error('League champions query failed:', error);
     res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
   }
 });
