@@ -19,7 +19,7 @@ export default function ChampionsPage() {
         <small>{champion.year}년 {champion.quarter}분기</small>
         <h2>🏆 {champion.winnerTeam.teamName}</h2>
         <h3>우승 멤버</h3>
-        {champion.members.length ? <div className="winner-members">{champion.members.map(member => <span key={member.memberId}>{member.name}</span>)}</div> : <p className="muted">등록된 우승 멤버가 없습니다.</p>}
+        {champion.members.length ? <div className="winner-members">{champion.members.map(member => <span className={member.isCaptain ? 'captain-pill' : ''} key={member.memberId}>{member.isCaptain ? '👑 주장 ' : ''}{member.name}</span>)}</div> : <p className="muted">등록된 우승 멤버가 없습니다.</p>}
       </article>)}
     </div>}
   </>

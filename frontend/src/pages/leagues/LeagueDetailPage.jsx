@@ -126,10 +126,10 @@ function sortParticipants(participants, sort) {
   })
 }
 
-function ParticipantAttendanceRow({ participant }) {
+function ParticipantAttendanceRow({ participant, isCaptain }) {
   const isGuest = participant.memberType === 'GUEST'
   return <article className="participant-attendance-row">
-    <div><b className={isGuest ? 'attendance-guest' : ''}>{participant.name}</b><span>{participant.teamName || '미배정'} · <em className={isGuest ? 'attendance-guest' : ''}>{isGuest ? '게스트' : '정회원'}</em></span></div>
+    <div><b className={isCaptain ? 'captain-name' : isGuest ? 'attendance-guest' : ''}>{isCaptain ? '👑 ' : ''}{participant.name}{isCaptain ? ' · 주장' : ''}</b><span>{participant.teamName || '미배정'} · <em className={isGuest ? 'attendance-guest' : ''}>{isGuest ? '게스트' : '정회원'}</em></span></div>
     <div><strong>{formatAttendanceRate(participant.attendanceRate)}</strong><small>{participant.attendanceCount} / {participant.totalAttendanceDays}</small></div>
   </article>
 }
@@ -180,7 +180,7 @@ export default function LeagueDetailPage() {
         : tab === 'winner'
           ? winner === undefined ? <Loading /> : <WinnerCard winner={winner} />
           : tab === 'participants'
-            ? participants === null ? <Loading /> : <><div className="participant-sort"><label htmlFor="participant-sort">참가자 정렬</label><select id="participant-sort" value={participantSort} onChange={event => setParticipantSort(event.target.value)}><option value="rate">참석률순</option><option value="name">이름순</option></select></div><div className="team-groups">{grouped.map(t => <section className="card team-group" key={t.id}><h3>{t.name}</h3>{t.members.map(member => <ParticipantAttendanceRow key={member.memberId} participant={member} />)}</section>)}{unassigned.length > 0 && <section className="card team-group"><h3>미배정</h3>{unassigned.map(member => <ParticipantAttendanceRow key={member.memberId} participant={member} />)}</section>}</div></>
+            ? participants === null ? <Loading /> : <><div className="participant-sort"><label htmlFor="participant-sort">참가자 정렬</label><select id="participant-sort" value={participantSort} onChange={event => setParticipantSort(event.target.value)}><option value="rate">참석률순</option><option value="name">이름순</option></select></div><div className="team-groups">{grouped.map(t => <section className="card team-group" key={t.id}><h3>{t.name}</h3>{t.members.map(member => <ParticipantAttendanceRow key={member.memberId} participant={member} isCaptain={Number(member.memberId) === Number(t.captainMemberId)} />)}</section>)}{unassigned.length > 0 && <section className="card team-group"><h3>미배정</h3>{unassigned.map(member => <ParticipantAttendanceRow key={member.memberId} participant={member} />)}</section>}</div></>
             : <div className="empty card"><h3>아직 관련 정보가 없습니다.</h3></div>
 
   return <><LeagueHeader league={league} /><LeagueTabs tabs={tabs} selectedTab={tab} onSelect={selectTab} />{content}</>

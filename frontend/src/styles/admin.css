@@ -36,6 +36,8 @@
 .game-form .score-fields label { margin-top: 0; }
 .game-form .game-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 2px; }
 .game-form .game-actions button { width: 100%; min-height: 42px; margin: 0; }
+.captain-field { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 6px; margin: 8px 0; font-size: 12px; font-weight: 700; }
+.captain-field select { width: 100%; }
 .attendance-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 6px; }
 .attendance-summary { display:flex; align-items:center; gap:7px; min-width:0; }
 .attendance-summary strong { font-size:14px; white-space:nowrap; }
