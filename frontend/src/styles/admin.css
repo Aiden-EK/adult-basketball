@@ -35,20 +35,30 @@
 .game-form .score-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .game-form .score-fields label { margin-top: 0; }
 .attendance-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:14px 0 8px; }
+.attendance-toolbar strong { display:flex; flex-direction:column; gap:2px; font-size:14px; }
+.attendance-toolbar strong span { color:var(--green); font-size:11px; }
 .attendance-toolbar > div { display:flex; gap:6px; }
 .attendance-list { overflow:hidden; }
-.attendance-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); }
+.attendance-row { display:grid; grid-template-columns:minmax(0, 1fr) minmax(92px, 31%); align-items:center; gap:8px; min-height:62px; padding:8px 10px; border-bottom:1px solid var(--line); }
 .attendance-row:last-child { border-bottom:0; }
-.attendance-row > div:first-child { min-width:0; }
+.attendance-row-invalid { background:#fff8f6; box-shadow:inset 3px 0 #c85f51; }
 .attendance-row b { display:block; font-size:14px; }
 .attendance-row small { margin:2px 0 0; color:var(--muted); font:400 11px 'Noto Sans KR'; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.attendance-toggle { display:grid; grid-template-columns:repeat(2, minmax(48px, 1fr)); flex:none; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
-.attendance-toggle button { min-height:40px; padding:0 8px; border:0; background:#fff; color:var(--muted); font-size:12px; font-weight:700; }
-.attendance-toggle button + button { border-left:1px solid var(--line); }
-.attendance-toggle .selected-present { background:var(--mint); color:var(--green); }
-.attendance-toggle .selected-absent { background:#f0f2f1; color:var(--ink); }
-.attendance-hint { margin:8px 0 0; text-align:center; font-size:12px; }
+.attendance-check { display:flex; align-items:center; gap:9px; min-width:0; min-height:44px; cursor:pointer; }
+.attendance-check input { width:19px; height:19px; flex:none; margin:0; accent-color:var(--green); }
+.attendance-check span { min-width:0; }
+.attendance-check:focus-within input { outline:3px solid #87b99f; outline-offset:2px; }
+.attendance-team-field { min-width:0; text-align:right; }
+.attendance-team-field select { width:100%; min-height:38px; padding:7px 24px 7px 8px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); font-size:12px; font-weight:700; text-overflow:ellipsis; }
+.attendance-team-field select:disabled { background:#f2f4f3; color:#929995; opacity:1; }
+.attendance-team-field select[aria-invalid="true"] { border-color:#c85f51; }
+.attendance-team-field small { display:block; color:#aa5148; text-align:left; }
+.attendance-save { margin-top:12px; }
 .attendance-games { margin:12px 0; padding:12px 14px; box-shadow:none; }
 .attendance-games small { margin-bottom:4px; }
 .attendance-games p { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
-@media (max-width:359px) { .attendance-toolbar { align-items:flex-start; flex-direction:column; } }
+@media (max-width:390px) {
+  .attendance-toolbar { align-items:flex-start; flex-direction:column; }
+  .attendance-toolbar > div { width:100%; }
+  .attendance-toolbar button { flex:1; }
+}
