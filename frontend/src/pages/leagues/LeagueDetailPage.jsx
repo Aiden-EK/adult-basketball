@@ -16,7 +16,13 @@ const activeTabs = [['standings', '팀 순위'], ['games', '경기'], ['scorers'
 const completedTabs = [['winner', '우승팀'], ['standings', '최종 순위'], ['games', '경기 결과'], ['scorers', '개인 득점'], ['participants', '팀/참가자']]
 const allTabs = [...new Set([...activeTabs, ...completedTabs].map(([key]) => key))]
 const formatDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정'
-const isWinner = (game, teamId) => game.status === 'COMPLETED' && Number(game.winnerTeamId) === Number(teamId)
+const isWinner = (game, teamId) => {
+  if (game.status !== 'COMPLETED' || game.homeScore == null || game.awayScore == null) return false
+  const homeScore = Number(game.homeScore)
+  const awayScore = Number(game.awayScore)
+  if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore) || homeScore === awayScore) return false
+  return homeScore > awayScore ? Number(teamId) === Number(game.homeTeam.id) : Number(teamId) === Number(game.awayTeam.id)
+}
 const gameDateKey = game => String(game.gameDate || '').slice(0, 10)
 const attendanceTeamOrder = ['블랙', '화이트', '컬러']
 const attendanceNameCollator = new Intl.Collator('ko-KR')

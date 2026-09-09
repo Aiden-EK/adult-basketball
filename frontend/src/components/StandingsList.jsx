@@ -17,7 +17,7 @@ export default function StandingsList({ standings }) {
         <button className="standing-summary" type="button" aria-expanded={expanded} aria-controls={detailsId} aria-label={`${team.teamName} 상세 순위 ${expanded ? '접기' : '펼치기'}`} onClick={() => setExpandedTeamIds(current => { const next = new Set(current); if (expanded) next.delete(team.teamId); else next.add(team.teamId); return next })}>
           <b className="rank-number">{team.rank}</b>
           <span className="standing-team" title={team.teamName}>{team.teamName}</span>
-          <span className="standing-record"><span className="standing-record-pills"><b className="standing-win">{team.wins}승</b><b className="standing-loss">{team.losses}패</b></span><small>{formatWinRate(team.winRate)}</small></span>
+          <span className="standing-record"><span className="standing-record-pills"><b className="standing-win"><em>{team.wins}</em>승</b><b className="standing-loss"><em>{team.losses}</em>패</b></span><small>승률 <b>{formatWinRate(team.winRate)}</b></small></span>
           <span className={`standing-difference ${team.pointDifference > 0 ? 'positive' : team.pointDifference < 0 ? 'negative' : ''}`}><b>{formatDifference(team.pointDifference)}</b><small>득실차</small></span>
           <span className="standing-expand" aria-hidden="true">{expanded ? '▲' : '▼'}</span>
         </button>
