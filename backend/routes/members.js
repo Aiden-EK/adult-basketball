@@ -9,7 +9,7 @@ function parseMemberId(value) {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-const publicFields = `id, name, grade AS "memberType"`;
+const publicFields = `id, name, birth_year AS "birthYear", grade AS "memberType"`;
 
 router.get('/', async (req, res) => {
   try {
