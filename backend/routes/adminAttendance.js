@@ -14,7 +14,7 @@ router.get('/dates', async (req, res) => {
   try {
     const result = await pool.query(`SELECT gd.game_date AS "attendanceDate", COUNT(g.id)::int AS "gameCount"
       FROM game_day gd JOIN game g ON g.game_day_id=gd.id WHERE gd.league_id=$1
-      GROUP BY gd.id, gd.game_date ORDER BY gd.game_date`, [leagueId]);
+      GROUP BY gd.id, gd.game_date ORDER BY gd.game_date DESC`, [leagueId]);
     res.json(result.rows);
   } catch (error) { console.error('Attendance dates read failed:', error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
