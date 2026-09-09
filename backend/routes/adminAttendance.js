@@ -12,7 +12,7 @@ router.get('/dates', async (req, res) => {
   const leagueId = id(req.params.leagueId);
   if (!leagueId) return res.status(400).json({ message: 'Invalid league id' });
   try {
-    const result = await pool.query(`SELECT gd.game_date AS "attendanceDate", COUNT(g.id)::int AS "gameCount"
+    const result = await pool.query(`SELECT TO_CHAR(gd.game_date, 'YYYY-MM-DD') AS "attendanceDate", COUNT(g.id)::int AS "gameCount"
       FROM game_day gd JOIN game g ON g.game_day_id=gd.id WHERE gd.league_id=$1
       GROUP BY gd.id, gd.game_date ORDER BY gd.game_date DESC`, [leagueId]);
     res.json(result.rows);
