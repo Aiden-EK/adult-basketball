@@ -33,6 +33,23 @@ function FeaturedGame({ label, game, emptyText }) {
   </article>
 }
 
+function RecentGames({ games }) {
+  if (!games.length) return <article className="home-game card"><small>최근 경기</small><p className="muted">완료된 최근 경기가 없습니다.</p></article>
+  return <article className="home-game home-recent-games card">
+    <div className="home-game-heading"><small>최근 경기</small><span>{formatDate(games[0])}</span></div>
+    <div className="home-game-rows">{games.map(game => {
+      const homeWon = isWinner(game, game.homeTeam.id)
+      const awayWon = isWinner(game, game.awayTeam.id)
+      return <div className="home-game-row" key={game.gameId}>
+        <b className="home-game-number">{game.gameNo}경기</b>
+        <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
+        <b className="home-game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b>
+        <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
+      </div>
+    })}</div>
+  </article>
+}
+
 export default function HomePage() {
   const [league, setLeague] = useState(null)
   const [standings, setStandings] = useState(null)
@@ -51,7 +68,9 @@ export default function HomePage() {
     }).catch(() => setError('현재 리그 정보를 불러오지 못했습니다.')).finally(() => setLoading(false))
   }, [])
 
-  const completed = games.filter(game => game.status === 'COMPLETED').sort((a, b) => compareGames(b, a))[0]
+  const completedGames = games.filter(game => game.status === 'COMPLETED')
+  const latestCompletedDate = completedGames.map(game => String(game.gameDate).slice(0, 10)).sort().at(-1)
+  const recentGames = completedGames.filter(game => String(game.gameDate).slice(0, 10) === latestCompletedDate).sort((left, right) => Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId))
   const scheduled = games.filter(game => game.status !== 'COMPLETED').sort(compareGames)[0]
 
   if (loading) return <Loading />
@@ -71,7 +90,7 @@ export default function HomePage() {
     </section>
     <section className="home-section">
       <div className="section-head"><div><small>GAMES</small><h2>리그 경기</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=games`}>전체 보기 →</Link></div>
-      <div className="home-games"><FeaturedGame label="최근 경기" game={completed} emptyText="완료된 최근 경기가 없습니다." /><FeaturedGame label="다음 경기" game={scheduled} emptyText="다음 경기가 아직 등록되지 않았습니다." /></div>
+      <div className="home-games"><RecentGames games={recentGames} /><FeaturedGame label="다음 경기" game={scheduled} emptyText="다음 경기가 아직 등록되지 않았습니다." /></div>
     </section>
     <section className="home-links">
       <Link className="card" to={`/leagues/${league.id}?tab=participants`}><b>팀 · 참가자</b><span>현재 팀 편성 보기 →</span></Link>

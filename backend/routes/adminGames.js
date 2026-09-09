@@ -68,7 +68,7 @@ router.post('/set', async (req, res) => {
 router.get('/', async (req, res) => {
   const leagueId = id(req.params.leagueId);
   if (!leagueId) return res.status(400).json({ message: 'Invalid league id' });
-  try { const result = await pool.query(`SELECT ${fields} ${joins} WHERE gd.league_id = $1 ORDER BY g.scheduled_at NULLS LAST, gd.game_date, g.game_no, g.id`, [leagueId]); res.json(result.rows); } catch (error) { console.error(error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
+  try { const result = await pool.query(`SELECT ${fields} ${joins} WHERE gd.league_id = $1 ORDER BY gd.game_date DESC, g.game_no ASC, g.id ASC`, [leagueId]); res.json(result.rows); } catch (error) { console.error(error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
 
 router.post('/', async (req, res) => {
