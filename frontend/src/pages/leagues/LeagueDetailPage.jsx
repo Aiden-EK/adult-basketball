@@ -116,8 +116,11 @@ function LeagueTabs({ tabs, selectedTab, onSelect }) {
 
 const formatAttendanceRate = rate => `${Number(rate).toFixed(Number(rate) % 1 ? 1 : 0)}%`
 
-function sortParticipants(participants, sort) {
+function sortParticipants(participants, sort, captainMemberId = null) {
   return [...participants].sort((left, right) => {
+    const leftIsCaptain = captainMemberId !== null && Number(left.leagueMemberId) === Number(captainMemberId)
+    const rightIsCaptain = captainMemberId !== null && Number(right.leagueMemberId) === Number(captainMemberId)
+    if (leftIsCaptain !== rightIsCaptain) return leftIsCaptain ? -1 : 1
     if (sort === 'name') return participantNameCollator.compare(left.name, right.name) || Number(left.memberId) - Number(right.memberId)
     return Number(right.attendanceRate) - Number(left.attendanceRate)
       || Number(right.attendanceCount) - Number(left.attendanceCount)
@@ -148,7 +151,7 @@ export default function LeagueDetailPage() {
       .then(([gameData, summaryData]) => { setGames(gameData); setAttendanceSummary(Object.fromEntries(summaryData.dates.map(item => [item.date, item]))) })
       .catch(() => setError('경기 정보를 불러오지 못했습니다.'))
   }, [id, tab])
-  const grouped = teams.map(t => ({ ...t, members: sortParticipants(participants?.filter(p => Number(p.teamId) === Number(t.id)) || [], participantSort) })); const unassigned = sortParticipants(participants?.filter(p => p.teamId == null) || [], participantSort)
+  const grouped = teams.map(t => ({ ...t, members: sortParticipants(participants?.filter(p => Number(p.teamId) === Number(t.id)) || [], participantSort, t.captainMemberId) })); const unassigned = sortParticipants(participants?.filter(p => p.teamId == null) || [], participantSort)
   const showScores = gameId => { if (scores[gameId] !== undefined) return; getPlayerScores(gameId).then(data => setScores(s => ({ ...s, [gameId]: data }))).catch(() => setScores(s => ({ ...s, [gameId]: null }))) }
   const toggleAttendance = date => { const cacheKey = `${id}:${date}`; if (expandedAttendance === cacheKey) { setExpandedAttendance(null); return } setExpandedAttendance(cacheKey); if (attendanceDetails[cacheKey] !== undefined) return; getLeagueAttendance(id, date).then(data => setAttendanceDetails(current => ({ ...current, [cacheKey]: data }))).catch(() => setAttendanceDetails(current => ({ ...current, [cacheKey]: null }))) }
   if (error) return <><PageTitle title="리그 상세" back /><ErrorMessage text={error} /></>; if (!league || !tab) return <><PageTitle title="리그 상세" back /><Loading /></>
