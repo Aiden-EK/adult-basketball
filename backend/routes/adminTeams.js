@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
       t.captain_member_id AS "captainMemberId", captain.name AS "captainName",
       COALESCE(json_agg(json_build_object('leagueMemberId',lm.id,'memberId',m.id,'name',m.name,'memberType',m.grade) ORDER BY m.name) FILTER (WHERE m.id IS NOT NULL),'[]') AS members
       FROM team t LEFT JOIN league_member lm ON lm.team_id=t.id LEFT JOIN member m ON m.id=lm.member_id AND m.is_active=TRUE LEFT JOIN league_member captain_lm ON captain_lm.id=t.captain_member_id LEFT JOIN member captain ON captain.id=captain_lm.member_id
-      WHERE t.league_id=$1 GROUP BY t.id ORDER BY t.sort_order,t.id`, [leagueId]);
+      WHERE t.league_id=$1 GROUP BY t.id, captain.name ORDER BY t.sort_order,t.id`, [leagueId]);
     res.json(result.rows);
   } catch (e) { console.error(e); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); }
 });
