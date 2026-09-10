@@ -130,12 +130,12 @@ export default function HomePage() {
       <Link className="primary full" to={`/leagues/${league.id}?tab=standings`}>전체 순위 보기</Link>
     </section>
     <section className="home-section">
-      <div className="section-head"><div><small>WIN IMPACT</small><h2>승리기여도 TOP 3</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=win-impact`}>전체보기 →</Link></div>
-      <div className="win-impact-top3">{(winImpact?.players || []).filter(player => player.rankingEligible).slice(0, 3).map(player => <Link className="card" key={player.leagueMemberId} to={`/leagues/${league.id}?tab=win-impact`}><span>{player.rank}. {player.name}</span><strong>{impact(player.winImpact)}</strong></Link>)}</div>
-    </section>
-    <section className="home-section">
       <div className="section-head"><div><small>GAMES</small><h2>리그 경기</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=games`}>전체 보기 →</Link></div>
       <div className="home-games"><RecentGames games={recentGames} attendance={recentAttendance} /><FeaturedGame label="다음 경기" game={scheduled} emptyText="다음 경기가 아직 등록되지 않았습니다." /></div>
+    </section>
+    <section className="home-section home-win-impact">
+      <div className="section-head"><div><small>WIN IMPACT</small><h2>승리기여도 TOP 3</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=win-impact`}>전체보기 →</Link></div>
+      <div className="win-impact-top3 card">{(winImpact?.players || []).filter(player => player.rankingEligible).slice(0, 3).map(player => <Link className="win-impact-top3-row" key={player.leagueMemberId} to={`/leagues/${league.id}?tab=win-impact`}><b>{player.rank}위</b><span><strong>{player.name}</strong><small>{player.games}경기 · {player.wins}승 {player.losses}패</small></span><strong className={player.winImpact > 0 ? 'positive' : player.winImpact < 0 ? 'negative' : ''}>{impact(player.winImpact)}</strong></Link>)}</div>
     </section>
     <section className="home-links">
       <Link className="card" to={`/leagues/${league.id}?tab=participants`}><b>팀 · 참가자</b><span>현재 팀 편성 보기 →</span></Link>
