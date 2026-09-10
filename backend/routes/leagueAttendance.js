@@ -52,7 +52,7 @@ router.get('/rates', async (req, res) => {
         SELECT gd.id FROM game_day gd
         WHERE gd.league_id = $1 AND EXISTS (SELECT 1 FROM attendance a WHERE a.game_day_id = gd.id)
       )
-      SELECT lm.member_id AS "memberId", lm.team_id AS "teamId", t.name AS "teamName", m.name, m.grade AS "memberType",
+      SELECT lm.id AS "leagueMemberId", lm.member_id AS "memberId", lm.team_id AS "teamId", t.name AS "teamName", m.name, m.grade AS "memberType",
         COUNT(a.id) FILTER (WHERE a.status = 'PRESENT')::int AS "attendanceCount",
         (SELECT COUNT(*) FROM attendance_days)::int AS "totalAttendanceDays"
       FROM league_member lm
@@ -60,7 +60,7 @@ router.get('/rates', async (req, res) => {
       LEFT JOIN team t ON t.id = lm.team_id
       LEFT JOIN attendance a ON a.league_member_id = lm.id AND a.game_day_id IN (SELECT id FROM attendance_days)
       WHERE lm.league_id = $1 AND m.is_active = TRUE
-      GROUP BY lm.member_id, lm.team_id, t.name, m.name, m.grade
+      GROUP BY lm.id, lm.member_id, lm.team_id, t.name, m.name, m.grade
       ORDER BY m.name, lm.member_id
     `, [leagueId]);
     const participants = result.rows.map(row => {
