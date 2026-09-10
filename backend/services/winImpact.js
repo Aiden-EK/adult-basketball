@@ -14,6 +14,7 @@ function calculateWinImpact(rows, leagueId, minimumGames = 6) {
     const player = players.get(playerId);
     const gameTeamIds = [Number(row.teamAId), Number(row.teamBId)];
     const actualTeamId = row.actualTeamId == null ? null : Number(row.actualTeamId);
+    const attendanceRecorded = row.attendanceRecorded === true;
     const present = row.attendanceStatus === 'PRESENT' && actualTeamId !== null;
 
     for (const teamId of gameTeamIds) {
@@ -22,6 +23,7 @@ function calculateWinImpact(rows, leagueId, minimumGames = 6) {
       const team = player.teams.get(key);
       const won = Number(row.winnerTeamId) === teamId;
       const participated = present && actualTeamId === teamId;
+      if (!attendanceRecorded) continue;
       if (participated) {
         team.games += 1;
         if (won) team.wins += 1;
@@ -40,11 +42,12 @@ function calculateWinImpact(rows, leagueId, minimumGames = 6) {
     });
     const games = teams.reduce((sum, team) => sum + team.games, 0);
     const wins = teams.reduce((sum, team) => sum + team.wins, 0);
+    const gamesWithoutPlayer = teams.reduce((sum, team) => sum + team.gamesWithoutPlayer, 0);
     const weightedBaseline = teams.reduce((sum, team) => sum + (team.winImpact === null ? 0 : (team.winRateWithoutPlayer * team.games)), 0);
     const comparableGames = teams.filter(team => team.winImpact !== null).reduce((sum, team) => sum + team.games, 0);
     const weightedBaselineWinRate = comparableGames > 0 ? round(weightedBaseline / comparableGames) : null;
     const winImpact = weightedBaselineWinRate === null ? null : round((wins / games) * 100 - weightedBaselineWinRate);
-    return { leagueId: Number(leagueId), leagueMemberId: player.leagueMemberId, memberId: player.memberId, name: player.name, games, wins, losses: games - wins, winRate: rate(wins, games), weightedBaselineWinRate, winImpact, rankingEligible: games >= minimumGames && winImpact !== null, teams };
+    return { leagueId: Number(leagueId), leagueMemberId: player.leagueMemberId, memberId: player.memberId, name: player.name, games, wins, losses: games - wins, winRate: rate(wins, games), gamesWithoutPlayer, weightedBaselineWinRate, winRateWithoutPlayer: weightedBaselineWinRate, winImpact, rankingEligible: games >= minimumGames && winImpact !== null, teams };
   });
   result.sort((a, b) => Number(b.rankingEligible) - Number(a.rankingEligible) || (b.winImpact ?? -Infinity) - (a.winImpact ?? -Infinity) || b.games - a.games || a.name.localeCompare(b.name, 'ko'));
   result.forEach((player, index) => { player.rank = player.rankingEligible ? result.filter(item => item.rankingEligible && (item.winImpact ?? -Infinity) > (player.winImpact ?? -Infinity)).length + 1 : null; });
@@ -55,7 +58,7 @@ async function readWinImpact(pool, leagueId) {
   const result = await pool.query(`
     SELECT lm.id AS "leagueMemberId", lm.member_id AS "memberId", m.name,
       g.team_a_id AS "teamAId", ta.name AS "teamAName", g.team_b_id AS "teamBId", tb.name AS "teamBName",
-      g.winner_team_id AS "winnerTeamId", a.status AS "attendanceStatus", a.actual_team_id AS "actualTeamId"
+      g.winner_team_id AS "winnerTeamId", a.id IS NOT NULL AS "attendanceRecorded", a.status AS "attendanceStatus", a.actual_team_id AS "actualTeamId"
     FROM league_member lm
     JOIN member m ON m.id = lm.member_id AND m.is_active = TRUE
     CROSS JOIN (SELECT g.id, gd.id AS game_day_id, g.team_a_id, g.team_b_id, g.winner_team_id, gd.game_date
