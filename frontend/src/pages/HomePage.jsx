@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getLeagueStandings, getLeagues } from '../services/leagueApi'
+import { getLeagueStandings, getLeagues, getLeagueWinImpact } from '../services/leagueApi'
 import { getLeagueAttendance, getLeagueGames } from '../services/gameApi'
 import { ErrorMessage, Loading } from '../components/Status'
 import LeagueStatusBadge from '../components/LeagueStatusBadge'
@@ -8,6 +8,8 @@ import StandingsList from '../components/StandingsList'
 import { selectCurrentLeague } from '../utils/league'
 import '../styles/standings.css'
 import '../styles/home.css'
+import '../styles/win-impact.css'
+import { impact } from '../components/WinImpactList'
 
 const gameTime = game => new Date(game.scheduledAt || `${String(game.gameDate).slice(0, 10)}T00:00:00`).getTime()
 const compareGames = (left, right) => gameTime(left) - gameTime(right) || Number(left.gameNo) - Number(right.gameNo) || Number(left.gameId) - Number(right.gameId)
@@ -88,6 +90,7 @@ export default function HomePage() {
   const [standings, setStandings] = useState(null)
   const [games, setGames] = useState([])
   const [recentAttendance, setRecentAttendance] = useState(undefined)
+  const [winImpact, setWinImpact] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -96,9 +99,10 @@ export default function HomePage() {
       const activeLeague = selectCurrentLeague(leagues)
       setLeague(activeLeague)
       if (!activeLeague) return
-      const [standingData, gameData] = await Promise.all([getLeagueStandings(activeLeague.id), getLeagueGames(activeLeague.id)])
+      const [standingData, gameData, impactData] = await Promise.all([getLeagueStandings(activeLeague.id), getLeagueGames(activeLeague.id), getLeagueWinImpact(activeLeague.id)])
       setStandings(standingData.standings)
       setGames(gameData)
+      setWinImpact(impactData)
       const completedGames = gameData.filter(game => game.status === 'COMPLETED')
       const latestCompletedDate = completedGames.map(gameDateKey).sort().at(-1)
       if (latestCompletedDate) getLeagueAttendance(activeLeague.id, latestCompletedDate).then(setRecentAttendance).catch(() => setRecentAttendance(null))
@@ -124,6 +128,10 @@ export default function HomePage() {
       <div className="section-head"><div><small>STANDINGS</small><h2>현재 리그 순위</h2></div><span className="section-note">경기 결과 자동 반영</span></div>
       {standings === null ? <Loading /> : <StandingsList standings={standings} />}
       <Link className="primary full" to={`/leagues/${league.id}?tab=standings`}>전체 순위 보기</Link>
+    </section>
+    <section className="home-section">
+      <div className="section-head"><div><small>WIN IMPACT</small><h2>승리기여도 TOP 3</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=win-impact`}>전체보기 →</Link></div>
+      <div className="win-impact-top3">{(winImpact?.players || []).filter(player => player.rankingEligible).slice(0, 3).map(player => <Link className="card" key={player.leagueMemberId} to={`/leagues/${league.id}?tab=win-impact`}><span>{player.rank}. {player.name}</span><strong>{impact(player.winImpact)}</strong></Link>)}</div>
     </section>
     <section className="home-section">
       <div className="section-head"><div><small>GAMES</small><h2>리그 경기</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=games`}>전체 보기 →</Link></div>

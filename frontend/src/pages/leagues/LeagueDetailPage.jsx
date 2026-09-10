@@ -2,17 +2,19 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import PageTitle from '../../components/PageTitle'
 import { ErrorMessage, EmptyState, Loading } from '../../components/Status'
-import { getLeague, getLeagueScorers, getLeagueStandings, getLeagueWinner } from '../../services/leagueApi'
+import { getLeague, getLeagueScorers, getLeagueStandings, getLeagueWinner, getLeagueWinImpact } from '../../services/leagueApi'
 import { getLeagueTeams } from '../../services/teamApi'
 import { getLeagueAttendance, getLeagueAttendanceRates, getLeagueAttendanceSummary, getLeagueGames, getPlayerScores } from '../../services/gameApi'
 import StandingsList from '../../components/StandingsList'
 import LeagueStatusBadge from '../../components/LeagueStatusBadge'
+import WinImpactList from '../../components/WinImpactList'
 import '../../styles/game-list.css'
 import '../../styles/winner.css'
 import '../../styles/standings.css'
+import '../../styles/win-impact.css'
 
-const activeTabs = [['standings', '팀 순위'], ['games', '경기'], ['scorers', '개인 득점'], ['participants', '팀/참가자']]
-const completedTabs = [['winner', '우승팀'], ['standings', '최종 순위'], ['games', '경기 결과'], ['scorers', '개인 득점'], ['participants', '팀/참가자']]
+const activeTabs = [['standings', '팀 순위'], ['games', '경기'], ['scorers', '개인 득점'], ['win-impact', '승리기여도'], ['participants', '팀/참가자']]
+const completedTabs = [['winner', '우승팀'], ['standings', '최종 순위'], ['games', '경기 결과'], ['scorers', '개인 득점'], ['win-impact', '승리기여도'], ['participants', '팀/참가자']]
 const allTabs = [...new Set([...activeTabs, ...completedTabs].map(([key]) => key))]
 const formatDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정'
 const isWinner = (game, teamId) => {
@@ -138,12 +140,14 @@ function ParticipantAttendanceRow({ participant, isCaptain }) {
 }
 
 export default function LeagueDetailPage() {
+  const [winImpact, setWinImpact] = useState(null)
   const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [attendanceSummary, setAttendanceSummary] = useState({}); const [attendanceDetails, setAttendanceDetails] = useState({}); const [expandedAttendance, setExpandedAttendance] = useState(null); const [scores, setScores] = useState({}); const [participantSort, setParticipantSort] = useState('rate'); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
   useEffect(() => { getLeague(id).then(data => { const availableTabs = data.status === 'COMPLETED' ? completedTabs : activeTabs; const defaultTab = data.status === 'COMPLETED' ? 'winner' : 'standings'; setLeague(data); setTab(current => availableTabs.some(([key]) => key === current) ? current : defaultTab) }).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id])
   useEffect(() => {
     if (tab === 'standings') getLeagueStandings(id).then(data => setStandings(data.standings)).catch(() => setError('순위 정보를 불러오지 못했습니다.'))
     if (tab === 'scorers') getLeagueScorers(id).then(data => setScorers(data.scorers)).catch(() => setError('개인 득점 순위를 불러오지 못했습니다.'))
     if (tab === 'winner') getLeagueWinner(id).then(data => setWinner(data.winner)).catch(() => setError('우승팀 정보를 불러오지 못했습니다.'))
+    if (tab === 'win-impact') getLeagueWinImpact(id).then(setWinImpact).catch(() => setError('승리기여도 정보를 불러오지 못했습니다.'))
     if (tab === 'participants') Promise.all([getLeagueAttendanceRates(id), getLeagueTeams(id)])
       .then(([attendanceData, teamData]) => { setParticipants(attendanceData.participants); setTeams(teamData) })
       .catch(() => setError('참가자 정보를 불러오지 못했습니다.'))
@@ -157,7 +161,9 @@ export default function LeagueDetailPage() {
   if (error) return <><PageTitle title="리그 상세" back /><ErrorMessage text={error} /></>; if (!league || !tab) return <><PageTitle title="리그 상세" back /><Loading /></>
   const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
   const selectTab = key => { setTab(key); setSearchParams({ tab: key }, { replace: true }) }
-  const content = tab === 'standings'
+  const content = tab === 'win-impact'
+    ? winImpact === null ? <Loading /> : <><div className="section-head"><div><small>WIN IMPACT</small><h2>승리기여도</h2></div><span className="section-note">최소 {winImpact?.minimumGames}경기</span></div><WinImpactList players={winImpact?.players} /></>
+    : tab === 'standings'
     ? standings === null ? <Loading /> : <StandingsList standings={standings} />
     : tab === 'games'
       ? games === null ? <Loading /> : games.length === 0 ? <EmptyState text="등록된 경기가 없습니다." /> : <div className="game-list">{groupGamesByDate(games).map(group => <article className="card game-day-card" key={group.date}>
