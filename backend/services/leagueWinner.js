@@ -8,7 +8,7 @@ async function readLeagueWinner(db, leagueId) {
   if (!row.winnerTeamId) return { leagueId, status: row.status, winner: null }
   const members = await db.query(`SELECT m.id AS "memberId", m.name, (lm.id=$3) AS "isCaptain" FROM league_member lm JOIN member m ON m.id=lm.member_id
     WHERE lm.league_id=$1 AND lm.team_id=$2 ORDER BY (lm.id=$3) DESC, m.name, m.id`, [leagueId, row.winnerTeamId, row.captainMemberId])
-  return { leagueId, status: row.status, winner: { teamId: Number(row.winnerTeamId), teamName: row.winnerTeamName, captain: row.captainMemberId ? { memberId: Number(row.captainMemberId), name: row.captainName } : null, members: members.rows.map(member => ({ ...member, memberId: Number(member.memberId) })) } }
+  return { leagueId, status: row.status, winner: { teamId: Number(row.winnerTeamId), teamName: row.winnerTeamName, captain: row.captainMemberId ? { memberId: Number(row.captainMemberId), name: row.captainName } : null, members: members.rows.map(member => ({ memberId: Number(member.memberId), name: member.name, ...(member.isCaptain ? { isCaptain: true } : {}) })) } }
 }
 
 async function readLeagueChampions(db) {
