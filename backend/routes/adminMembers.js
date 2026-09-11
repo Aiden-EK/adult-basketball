@@ -28,10 +28,31 @@ router.post('/', async (req, res) => {
   if (!validTypes.includes(memberType)) return res.status(400).json({ message: 'member_type must be REGULAR or GUEST' });
   if (note !== undefined && typeof note !== 'string') return res.status(400).json({ message: 'note must be a string' });
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(`INSERT INTO member (name, birth_year, grade, note) VALUES ($1, $2, $3, $4) RETURNING ${memberFields}`, [name.trim(), birthYear, memberType, note || null]);
-    res.status(201).json(result.rows[0]);
-  } catch (error) { sendDatabaseError(res, error, 'create'); }
+    await client.query('BEGIN');
+    const result = await client.query(`INSERT INTO member (name, birth_year, grade, note) VALUES ($1, $2, $3, $4) RETURNING ${memberFields}`, [name.trim(), birthYear, memberType, note || null]);
+    const member = result.rows[0];
+
+    // 신규 활성 회원은 현재 진행 중인 모든 리그에 팀 미배정 상태로 참가시킨다.
+    if (member.isActive) {
+      await client.query(`
+        INSERT INTO league_member (league_id, member_id, team_id)
+        SELECT id, $1, NULL
+        FROM league
+        WHERE status = 'ACTIVE'
+        ON CONFLICT (league_id, member_id) DO NOTHING
+      `, [member.id]);
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json(member);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    sendDatabaseError(res, error, 'create');
+  } finally {
+    client.release();
+  }
 });
 
 router.get('/:id', async (req, res) => {
