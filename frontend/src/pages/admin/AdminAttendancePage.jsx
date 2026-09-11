@@ -7,14 +7,34 @@ import { formatLeagueLabel } from '../../utils/league'
 
 const dateLabel = value => new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
+function getTeamPriority(teamName, teamId) {
+  if (teamId === null || teamId === undefined) return 3
+  if (teamName === '블랙') return 0
+  if (teamName === '화이트') return 1
+  if (teamName === '컬러') return 2
+  return 3
+}
+
 function prepareAttendance(data) {
+  const teamById = new Map(data.teams.map(team => [Number(team.id), team.name]))
+  const memberTypeOrder = { REGULAR: 0, GUEST: 1 }
   return {
     ...data,
-    members: data.members.map(member => ({
-      ...member,
-      attendanceStatus: member.attendanceStatus || 'ABSENT',
-      actualTeamId: member.attendanceStatus === 'PRESENT' ? member.actualTeamId : null,
-    })),
+    members: data.members
+      .map(member => ({
+        ...member,
+        attendanceStatus: member.attendanceStatus || 'ABSENT',
+        actualTeamId: member.attendanceStatus === 'PRESENT' ? member.actualTeamId : null,
+      }))
+      .sort((left, right) => {
+        const typeDifference = (memberTypeOrder[left.membershipType] ?? 2) - (memberTypeOrder[right.membershipType] ?? 2)
+        if (typeDifference !== 0) return typeDifference
+
+        const leftTeamId = left.attendanceStatus === 'PRESENT' && left.actualTeamId !== null ? left.actualTeamId : left.teamId
+        const rightTeamId = right.attendanceStatus === 'PRESENT' && right.actualTeamId !== null ? right.actualTeamId : right.teamId
+        const teamDifference = getTeamPriority(teamById.get(Number(leftTeamId)), leftTeamId) - getTeamPriority(teamById.get(Number(rightTeamId)), rightTeamId)
+        return teamDifference || left.name.localeCompare(right.name, 'ko') || Number(left.leagueMemberId) - Number(right.leagueMemberId)
+      }),
   }
 }
 
