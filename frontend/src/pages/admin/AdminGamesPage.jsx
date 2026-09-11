@@ -17,6 +17,7 @@ const selectedTeamName = (teams, teamId) => teams.find(team => String(team.id) =
 function ResultPreview({ form, teams }) {
   if (form.status !== 'COMPLETED') return null
   const hasScores = form.homeScore !== '' && form.awayScore !== ''
+  if (!form.resultType) return null
   if (form.resultType === 'FORFEIT') return <div className="result-preview"><small>결과 · 승리팀</small><strong>몰수 경기 · {form.winnerTeamId ? `🏆 ${selectedTeamName(teams, form.winnerTeamId)}` : '승리팀을 선택해주세요.'}</strong></div>
   if (form.resultType === 'TIEBREAK') return <div className="result-preview"><small>승리팀</small><strong>{form.winnerTeamId ? `🏆 ${selectedTeamName(teams, form.winnerTeamId)}` : '승리팀을 선택해주세요.'}</strong></div>
   if (!hasScores) return null
@@ -39,6 +40,7 @@ export default function AdminGamesPage() {
   const [teams, setTeams] = useState([])
   const [games, setGames] = useState(null)
   const [form, setForm] = useState(blank)
+  const [originalStatus, setOriginalStatus] = useState(null)
   const [scheduleForm, setScheduleForm] = useState(blankSet)
   const [editing, setEditing] = useState(null)
   const [scoresGame, setScoresGame] = useState(null)
@@ -61,13 +63,15 @@ export default function AdminGamesPage() {
   }, [])
 
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }))
+  const changeStatus = value => setForm(current => value === current.status ? current : ({ ...current, status: value, homeScore: '', awayScore: '', resultType: '', winnerTeamId: '' }))
   const changeLeague = value => { setGames(null); setLeagueId(value); setScoresGame(null); load(value) }
   const edit = game => {
     setEditing(game.gameId)
+    setOriginalStatus(game.status)
     // game_date는 PostgreSQL DATE이므로 시간대 변환 없이 YYYY-MM-DD로 사용한다.
-    setForm({ homeTeamId: String(game.homeTeamId), awayTeamId: String(game.awayTeamId), gameDate: normalizedGameDate(game.gameDate), status: game.status, homeScore: game.homeScore ?? '', awayScore: game.awayScore ?? '', resultType: game.resultType || 'NORMAL', winnerTeamId: game.winnerTeamId ? String(game.winnerTeamId) : '' })
+    setForm({ homeTeamId: String(game.homeTeamId), awayTeamId: String(game.awayTeamId), gameDate: normalizedGameDate(game.gameDate), status: game.status, homeScore: game.homeScore ?? '', awayScore: game.awayScore ?? '', resultType: game.status === 'COMPLETED' ? (game.resultType || 'NORMAL') : '', winnerTeamId: game.status === 'COMPLETED' && game.winnerTeamId ? String(game.winnerTeamId) : '' })
   }
-  const reset = () => { setEditing(null); setForm(blank); setConfirmOpen(false) }
+  const reset = () => { setEditing(null); setOriginalStatus(null); setForm(blank); setConfirmOpen(false) }
 
   function save(event) {
     event.preventDefault()
@@ -151,10 +155,10 @@ export default function AdminGamesPage() {
       <label>팀 1<select value={form.homeTeamId} onChange={event => change('homeTeamId', event.target.value)} required><option value="">선택</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label>팀 2<select value={form.awayTeamId} onChange={event => change('awayTeamId', event.target.value)} required><option value="">선택</option>{teams.filter(team => String(team.id) !== String(form.homeTeamId)).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label className="game-date-field">경기 날짜<input type="date" value={form.gameDate} onChange={event => change('gameDate', event.target.value)} required /></label>
-      <label className="game-status-field">상태<select value={form.status} onChange={event => change('status', event.target.value)}><option value="SCHEDULED">예정</option><option value="COMPLETED">종료</option></select></label>
+      <label className="game-status-field">상태<select value={form.status} onChange={event => changeStatus(event.target.value)}><option value="SCHEDULED">예정</option><option value="COMPLETED">종료</option></select></label>
       {form.status === 'COMPLETED' && <>
         <div className="score-fields"><label>팀 1 점수<input type="number" min="0" step="1" value={form.homeScore} onChange={event => change('homeScore', event.target.value)} required /></label><label>팀 2 점수<input type="number" min="0" step="1" value={form.awayScore} onChange={event => change('awayScore', event.target.value)} required /></label></div>
-        <label className="result-type-field">결과 유형<select value={form.resultType} onChange={event => change('resultType', event.target.value)}><option value="NORMAL">정상 경기</option><option value="TIEBREAK">동점 후 승부결정</option><option value="FORFEIT">몰수 경기</option></select></label>
+        <label className="result-type-field">결과 유형<select value={form.resultType} onChange={event => change('resultType', event.target.value)} required><option value="">선택</option><option value="NORMAL">정상 경기</option><option value="TIEBREAK">동점 후 승부결정</option><option value="FORFEIT">몰수 경기</option></select></label>
         {(form.resultType === 'FORFEIT' || form.resultType === 'TIEBREAK') && <label className="winner-field">승리팀<select value={form.winnerTeamId} onChange={event => change('winnerTeamId', event.target.value)} required><option value="">선택</option><option value={form.homeTeamId}>{selectedTeamName(teams, form.homeTeamId)}</option><option value={form.awayTeamId}>{selectedTeamName(teams, form.awayTeamId)}</option></select></label>}
         <ResultPreview form={form} teams={teams} />
       </>}
@@ -163,10 +167,21 @@ export default function AdminGamesPage() {
     }
 
     {confirmOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setConfirmOpen(false) }}><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-      <h3 id="confirm-title">경기 결과를 저장하시겠습니까?</h3>
-      <p className="confirm-score">{selectedTeamName(teams, form.homeTeamId)} {form.homeScore} : {form.awayScore} {selectedTeamName(teams, form.awayTeamId)}</p>
-      <p className="confirm-result">{form.resultType === 'FORFEIT' ? '결과: 몰수 경기' : form.resultType === 'TIEBREAK' ? '결과: 동점 후 승부결정' : '결과: 정상 경기'}<br />승리팀: {form.resultType === 'NORMAL' ? (form.homeScore === form.awayScore ? '동점' : selectedTeamName(teams, Number(form.homeScore) > Number(form.awayScore) ? form.homeTeamId : form.awayTeamId)) : selectedTeamName(teams, form.winnerTeamId)}</p>
-      <div className="modal-actions"><button type="button" className="secondary" onClick={() => setConfirmOpen(false)}>취소</button><button type="button" className="primary" onClick={confirmSave}>저장</button></div>
+      {originalStatus === 'COMPLETED' && form.status === 'SCHEDULED' ? <>
+        <h3 id="confirm-title">경기를 예정 상태로 변경하시겠습니까?</h3>
+        <p className="confirm-warning">기존에 입력된 경기 결과와 개인 득점이 삭제됩니다.</p>
+        <p className="confirm-info">{selectedTeamName(teams, form.homeTeamId)} vs {selectedTeamName(teams, form.awayTeamId)}<br />경기 날짜: {new Date(`${form.gameDate}T00:00:00`).toLocaleDateString('ko-KR')}<br />상태: 예정</p>
+        <div className="modal-actions"><button type="button" className="secondary" onClick={() => setConfirmOpen(false)}>취소</button><button type="button" className="primary" onClick={confirmSave}>예정으로 변경</button></div>
+      </> : form.status === 'SCHEDULED' ? <>
+        <h3 id="confirm-title">경기 정보를 수정하시겠습니까?</h3>
+        <p className="confirm-info">{selectedTeamName(teams, form.homeTeamId)} vs {selectedTeamName(teams, form.awayTeamId)}<br />경기 날짜: {new Date(`${form.gameDate}T00:00:00`).toLocaleDateString('ko-KR')}<br />상태: 예정</p>
+        <div className="modal-actions"><button type="button" className="secondary" onClick={() => setConfirmOpen(false)}>취소</button><button type="button" className="primary" onClick={confirmSave}>저장</button></div>
+      </> : <>
+        <h3 id="confirm-title">경기 결과를 저장하시겠습니까?</h3>
+        <p className="confirm-score">{selectedTeamName(teams, form.homeTeamId)} {form.homeScore} : {form.awayScore} {selectedTeamName(teams, form.awayTeamId)}</p>
+        <p className="confirm-result">{form.resultType === 'FORFEIT' ? '결과: 몰수 경기' : form.resultType === 'TIEBREAK' ? '결과: 동점 후 승부결정' : '결과: 정상 경기'}<br />승리팀: {form.resultType === 'NORMAL' ? (form.homeScore === form.awayScore ? '동점' : selectedTeamName(teams, Number(form.homeScore) > Number(form.awayScore) ? form.homeTeamId : form.awayTeamId)) : selectedTeamName(teams, form.winnerTeamId)}</p>
+        <div className="modal-actions"><button type="button" className="secondary" onClick={() => setConfirmOpen(false)}>취소</button><button type="button" className="primary" onClick={confirmSave}>저장</button></div>
+      </>}
     </div></div>}
 
     {message && <p className="success">{message}</p>}

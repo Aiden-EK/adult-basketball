@@ -47,6 +47,8 @@
 .confirm-modal h3 { margin:0 0 14px; font-size:17px; }
 .confirm-score { margin:0; color:var(--ink); font-size:16px; font-weight:800; line-height:1.5; }
 .confirm-result { margin:10px 0 16px; color:var(--muted); font-size:13px; line-height:1.7; }
+.confirm-warning { margin:0 0 10px; padding:9px 10px; border-radius:9px; background:#fff6e8; color:#9a5c17; font-size:13px; line-height:1.5; }
+.confirm-info { margin:10px 0 16px; color:var(--muted); font-size:13px; line-height:1.8; }
 .modal-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
 .modal-actions button { width:100%; }
 .captain-field { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 6px; margin: 8px 0; font-size: 12px; font-weight: 700; }
