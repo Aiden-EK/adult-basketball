@@ -50,15 +50,28 @@ function calculateWinImpact(rows, leagueId, minimumGames = 6) {
       const winRate = rate(team.wins, team.games);
       const overallTeamStats = teamStats.get(team.teamId);
       const teamAverageWinRate = overallTeamStats ? rate(overallTeamStats.wins, overallTeamStats.games) : null;
-      return { ...team, losses: team.games - team.wins, teamAverageWinRate, winImpact: winRate !== null && teamAverageWinRate !== null ? round(winRate - teamAverageWinRate) : null };
+      return {
+        teamId: team.teamId,
+        teamName: team.teamName,
+        teamGames: overallTeamStats?.games || 0,
+        teamWins: overallTeamStats?.wins || 0,
+        teamLosses: overallTeamStats ? overallTeamStats.games - overallTeamStats.wins : 0,
+        teamWinRate: teamAverageWinRate,
+        participatedGames: team.games,
+        participatedWins: team.wins,
+        participatedLosses: team.games - team.wins,
+        participatedWinRate: winRate,
+        teamAverageWinRate,
+        winImpact: winRate !== null && teamAverageWinRate !== null ? round(winRate - teamAverageWinRate) : null
+      };
     });
-    const games = teams.reduce((sum, team) => sum + team.games, 0);
-    const wins = teams.reduce((sum, team) => sum + team.wins, 0);
-    const weightedTeamAverage = teams.reduce((sum, team) => sum + (team.teamAverageWinRate === null ? 0 : (team.teamAverageWinRate * team.games)), 0);
-    const comparableGames = teams.filter(team => team.teamAverageWinRate !== null).reduce((sum, team) => sum + team.games, 0);
+    const games = teams.reduce((sum, team) => sum + team.participatedGames, 0);
+    const wins = teams.reduce((sum, team) => sum + team.participatedWins, 0);
+    const weightedTeamAverage = teams.reduce((sum, team) => sum + (team.teamAverageWinRate === null ? 0 : (team.teamAverageWinRate * team.participatedGames)), 0);
+    const comparableGames = teams.filter(team => team.teamAverageWinRate !== null).reduce((sum, team) => sum + team.participatedGames, 0);
     const teamAverageWinRate = comparableGames > 0 ? round(weightedTeamAverage / comparableGames) : null;
     const winImpact = teamAverageWinRate === null ? null : round((wins / games) * 100 - teamAverageWinRate);
-    return { leagueId: Number(leagueId), leagueMemberId: player.leagueMemberId, memberId: player.memberId, name: player.name, games, wins, losses: games - wins, winRate: rate(wins, games), teamAverageWinRate, winImpact, rankingEligible: games >= minimumGames && winImpact !== null, teams };
+    return { leagueId: Number(leagueId), leagueMemberId: player.leagueMemberId, memberId: player.memberId, name: player.name, games, wins, losses: games - wins, participationWinRate: rate(wins, games), winRate: rate(wins, games), teamAverageWinRate, winImpact, rankingEligible: games >= minimumGames && winImpact !== null, teams };
   });
   result.sort((a, b) => Number(b.rankingEligible) - Number(a.rankingEligible) || (b.winImpact ?? -Infinity) - (a.winImpact ?? -Infinity) || b.games - a.games || a.name.localeCompare(b.name, 'ko'));
   result.forEach((player, index) => { player.rank = player.rankingEligible ? result.filter(item => item.rankingEligible && (item.winImpact ?? -Infinity) > (player.winImpact ?? -Infinity)).length + 1 : null; });
