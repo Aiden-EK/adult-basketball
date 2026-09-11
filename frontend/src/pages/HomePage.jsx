@@ -92,8 +92,8 @@ function AttendanceTop({ data, leagueId }) {
 
   const top = buildAttendanceRanking(participants).slice(0, 9)
   return <div className="attendance-top-grid card">{top.map(participant => <Link className="attendance-top-cell" key={participant.leagueMemberId} to={`/leagues/${leagueId}/attendance-ranking`}>
-    <span className="attendance-top-cell-heading"><b>{participant.rank}위</b><strong className={participant.memberType === 'GUEST' ? 'attendance-top-guest' : ''}>{participant.name}</strong></span>
-    <span className="attendance-top-cell-metric"><strong>{formatAttendanceRate(participant.attendanceRate)}</strong><small>{participant.attendanceCount}/{data.totalAttendanceDays}</small></span>
+    <span className="attendance-top-cell-heading"><b>{participant.rank}위</b><strong className={participant.memberType === 'GUEST' ? 'attendance-top-guest' : ''}>{participant.name}</strong><strong className="attendance-top-rate">{formatAttendanceRate(participant.attendanceRate)}</strong></span>
+    <small className="attendance-top-cell-attendance">{participant.attendanceCount}/{data.totalAttendanceDays} 참석</small>
   </Link>)}</div>
 }
 
