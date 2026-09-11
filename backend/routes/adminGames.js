@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const { resolveWinnerForSave } = require('../services/gameWinner');
 const router = express.Router({ mergeParams: true });
 
 function id(value) { return /^\d+$/.test(String(value)) && Number(value) > 0 ? Number(value) : null; }
@@ -74,8 +75,18 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const leagueId = id(req.params.leagueId); const homeTeamId = id(req.body?.homeTeamId); const awayTeamId = id(req.body?.awayTeamId); const status = req.body?.status || 'SCHEDULED'; const homeScore = score(req.body?.homeScore); const awayScore = score(req.body?.awayScore); const errorMessage = validate({ leagueId, homeTeamId, awayTeamId, status, homeScore, awayScore });
+  const leagueId = id(req.params.leagueId);
+  const homeTeamId = id(req.body?.homeTeamId); const awayTeamId = id(req.body?.awayTeamId);
+  const status = req.body?.status || 'SCHEDULED';
+  const homeScore = status === 'SCHEDULED' ? null : score(req.body?.homeScore);
+  const awayScore = status === 'SCHEDULED' ? null : score(req.body?.awayScore);
+  const resultType = status === 'SCHEDULED' ? null : (req.body?.resultType || 'NORMAL');
+  const errorMessage = validate({ leagueId, homeTeamId, awayTeamId, status, homeScore, awayScore, resultType });
   if (errorMessage) return res.status(400).json({ message: errorMessage });
+  const resolved = resolveWinnerForSave({ status, resultType, teamAId: homeTeamId, teamBId: awayTeamId,
+    teamAScore: homeScore, teamBScore: awayScore, winnerTeamId: id(req.body?.winnerTeamId) });
+  if (resolved.error) return res.status(400).json({ message: resolved.error });
+  const { winnerTeamId } = resolved;
   const scheduledAt = req.body?.scheduledAt || null; const date = scheduledAt ? new Date(scheduledAt) : new Date();
   if (Number.isNaN(date.getTime())) return res.status(400).json({ message: '경기 일시 형식이 올바르지 않습니다.' });
   const client = await pool.connect();
@@ -85,7 +96,7 @@ router.post('/', async (req, res) => {
     if (!(await teamsBelong(client, leagueId, homeTeamId, awayTeamId))) { await client.query('ROLLBACK'); return res.status(400).json({ message: '양 팀은 해당 리그에 속해야 합니다.' }); }
     const day = await client.query('INSERT INTO game_day (league_id, game_date) VALUES ($1, $2) ON CONFLICT (league_id, game_date) DO UPDATE SET game_date = EXCLUDED.game_date RETURNING id', [leagueId, date.toISOString().slice(0, 10)]);
     const number = await client.query('SELECT COALESCE(MAX(game_no), 0) + 1 AS next FROM game WHERE game_day_id = $1', [day.rows[0].id]);
-    const created = await client.query('INSERT INTO game (game_day_id, game_no, team_a_id, team_b_id, team_a_score, team_b_score, status, scheduled_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id', [day.rows[0].id, number.rows[0].next, homeTeamId, awayTeamId, homeScore, awayScore, status, scheduledAt]);
+    const created = await client.query('INSERT INTO game (game_day_id, game_no, team_a_id, team_b_id, team_a_score, team_b_score, status, scheduled_at, result_type, winner_team_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id', [day.rows[0].id, number.rows[0].next, homeTeamId, awayTeamId, homeScore, awayScore, status, scheduledAt, resultType, winnerTeamId]);
     await client.query('COMMIT');
     const result = await pool.query(`SELECT ${fields} ${joins} WHERE g.id = $1`, [created.rows[0].id]); res.status(201).json(result.rows[0]);
   } catch (error) { await client.query('ROLLBACK'); console.error(error); res.status(500).json({ message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }); } finally { client.release(); }
@@ -97,21 +108,10 @@ router.patch('/:gameId', async (req, res) => {
   const old = current.rows[0]; const homeTeamId = req.body?.homeTeamId === undefined ? Number(old.team_a_id) : id(req.body.homeTeamId); const awayTeamId = req.body?.awayTeamId === undefined ? Number(old.team_b_id) : id(req.body.awayTeamId); const status = req.body?.status || old.status;
   // 예정 상태는 요청 본문에 과거 결과값이 남아 있어도 서버가 모두 무효화한다.
   const homeScore = status === 'SCHEDULED' ? null : (req.body?.homeScore === undefined ? old.team_a_score : score(req.body.homeScore)); const awayScore = status === 'SCHEDULED' ? null : (req.body?.awayScore === undefined ? old.team_b_score : score(req.body.awayScore)); const resultType = status === 'SCHEDULED' ? null : (req.body?.resultType || old.result_type || 'NORMAL'); const requestedWinnerTeamId = status === 'SCHEDULED' ? null : (req.body?.winnerTeamId === undefined || req.body?.winnerTeamId === '' ? (old.winner_team_id ? Number(old.winner_team_id) : null) : id(req.body.winnerTeamId)); const errorMessage = validate({ leagueId, homeTeamId, awayTeamId, status, homeScore, awayScore, resultType }); if (errorMessage) return res.status(400).json({ message: errorMessage });
-  let winnerTeamId = null;
-  if (status === 'COMPLETED') {
-    if (resultType === 'NORMAL') {
-      if (homeScore !== awayScore) winnerTeamId = homeScore > awayScore ? homeTeamId : awayTeamId;
-      else {
-        if (!requestedWinnerTeamId) return res.status(400).json({ message: '점수가 같은 경우 승리팀을 지정해야 합니다.' });
-        if (![homeTeamId, awayTeamId].includes(requestedWinnerTeamId)) return res.status(400).json({ message: '승리팀은 해당 경기의 팀 중 하나여야 합니다.' });
-        winnerTeamId = requestedWinnerTeamId;
-      }
-    } else {
-      if (!requestedWinnerTeamId) return res.status(400).json({ message: resultType === 'FORFEIT' ? '몰수 경기의 승리팀을 선택해주세요.' : '동점 후 승부결정 경기의 승리팀을 선택해주세요.' });
-      if (![homeTeamId, awayTeamId].includes(requestedWinnerTeamId)) return res.status(400).json({ message: '승리팀은 해당 경기의 팀 중 하나여야 합니다.' });
-      winnerTeamId = requestedWinnerTeamId;
-    }
-  }
+  const resolved = resolveWinnerForSave({ status, resultType, teamAId: homeTeamId, teamBId: awayTeamId,
+    teamAScore: homeScore, teamBScore: awayScore, winnerTeamId: requestedWinnerTeamId });
+  if (resolved.error) return res.status(400).json({ message: resolved.error });
+  const { winnerTeamId } = resolved;
   if (!(await teamsBelong(pool, leagueId, homeTeamId, awayTeamId))) return res.status(400).json({ message: '양 팀은 해당 리그에 속해야 합니다.' });
   const date = req.body?.gameDate === undefined ? null : gameDate(req.body.gameDate);
   if (req.body?.gameDate !== undefined && !date) return res.status(400).json({ message: '경기 날짜 형식이 올바르지 않습니다.' });

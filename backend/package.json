@@ -9,6 +9,7 @@
     "test:player-scores": "node tests/playerScores.integration.test.js",
     "test:auth": "node tests/auth.integration.test.js",
     "test:winning-combinations": "node tests/winningCombinations.integration.test.js",
+    "test:game-winner": "node tests/gameWinner.integration.test.js",
     "test:admin-cli": "node tests/adminCli.integration.test.js",
     "test:winner": "node tests/leagueWinner.integration.test.js",
     "setup:admin": "node scripts/setupAdmin.js",

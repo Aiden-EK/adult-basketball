@@ -16,11 +16,16 @@ async function request(url, cookie, expectedStatus = 200) {
 
 // Independent PostgreSQL aggregation: build subsets per date, then join games.
 const verificationSql = `WITH RECURSIVE
-  valid_games AS (
-    SELECT g.* FROM game g JOIN game_day gd ON gd.id = g.game_day_id
-    WHERE gd.league_id = $1 AND g.status = 'COMPLETED'
-      AND COALESCE(g.result_type, 'NORMAL') <> 'FORFEIT'
-      AND g.winner_team_id IN (g.team_a_id, g.team_b_id)
+  source_games AS (
+    SELECT g.*, CASE WHEN g.winner_team_id IN (g.team_a_id,g.team_b_id) THEN g.winner_team_id
+      WHEN COALESCE(g.result_type,'NORMAL')='NORMAL' AND g.team_a_score>=0 AND g.team_b_score>=0
+      THEN CASE WHEN g.team_a_score>g.team_b_score THEN g.team_a_id WHEN g.team_b_score>g.team_a_score THEN g.team_b_id END
+      END AS resolved_winner_id
+    FROM game g JOIN game_day gd ON gd.id=g.game_day_id
+    WHERE gd.league_id=$1 AND g.status='COMPLETED' AND COALESCE(g.result_type,'NORMAL')<>'FORFEIT'
+  ), valid_games AS (
+    SELECT id,game_day_id,team_a_id,team_b_id,resolved_winner_id AS winner_team_id
+    FROM source_games WHERE resolved_winner_id IS NOT NULL
   ), roster AS (
     SELECT a.game_day_id, a.actual_team_id AS team_id, array_agg(DISTINCT lm.id ORDER BY lm.id) AS ids
     FROM attendance a JOIN game_day gd ON gd.id = a.game_day_id
@@ -63,11 +68,13 @@ async function main() {
     const publicPath = `/leagues/${league.id}/winning-combinations`;
     const adminPath = `/admin/leagues/${league.id}/winning-combinations`;
     const top7 = await request(publicPath);
+    assert.deepEqual(top7.teams.map(team => team.items.length), [7, 7, 7]);
     for (const value of ['0', '-1', '8', '100000', '1.5', 'abc', '', '1e0', '1&limit=2']) await request(`${publicPath}?limit=${value}`, null, 400);
     await request('/leagues/0/winning-combinations', null, 400);
     await request('/leagues/9007199254740991/winning-combinations', null, 404);
     await request(adminPath, null, 401);
-    assert.deepEqual((await request(`${publicPath}?limit=1`)).items, top7.items.slice(0, 1));
+    const preview = await request(`${publicPath}?limit=1`);
+    preview.teams.forEach((team, index) => assert.deepEqual(team.items, top7.teams[index].items.slice(0, 1)));
 
     // Random temporary test accounts exercise real login and middleware, then are removed.
     const loginId = `[TEST]-combinations-${crypto.randomUUID()}`;
@@ -85,24 +92,30 @@ async function main() {
     await request(adminPath, `admin_session=${token}`, 403);
     const top20 = await request(`${adminPath}?limit=20`, cookie);
     await request(`${adminPath}?limit=21`, cookie, 400);
-    assert.deepEqual(top20.items.slice(0, 7), top7.items);
-    assert.equal(top20.items.length, 20);
+    top20.teams.forEach((team, index) => {
+      assert.deepEqual(team.items.slice(0, 7), top7.teams[index].items);
+      assert.equal(team.items.length, 20);
+    });
     assert.equal(JSON.stringify(top7).includes('"note"'), false);
 
     const sqlRows = (await pool.query(verificationSql, [league.id])).rows.map(row => ({ ...row, memberIds: row.memberIds.map(Number) }));
     const eligible = sqlRows.filter(row => row.gamesPlayed >= 3);
     const full = await readWinningCombinations(pool, league.id, Number.MAX_SAFE_INTEGER);
-    assert.equal(full.items.length, eligible.length);
-    for (let i = 0; i < eligible.length; i += 1) {
-      const expected = eligible[i];
-      for (const key of Object.keys(expected)) assert.deepEqual(full.items[i][key], expected[key], `${i + 1}위 ${key}`);
+    const fullItems = full.teams.flatMap(team => team.items);
+    assert.equal(fullItems.length, eligible.length);
+    for (const team of full.teams) {
+      const expectedItems = eligible.filter(row => row.teamId === team.teamId);
+      for (let i = 0; i < expectedItems.length; i += 1) {
+        for (const key of Object.keys(expectedItems[i])) assert.deepEqual(team.items[i][key], expectedItems[i][key], `${team.teamName} ${i + 1}위 ${key}`);
+        assert.equal(team.items[i].rank, i + 1);
+      }
+      assert.deepEqual(top20.teams.find(t => t.teamId === team.teamId).items, team.items.slice(0, 20));
     }
-    assert.deepEqual(top20.items, full.items.slice(0, 20));
     assert.deepEqual(await request(publicPath), top7);
-    assert.equal(new Set(full.items.map(item => item.key)).size, full.items.length);
+    assert.equal(new Set(fullItems.map(item => item.key)).size, fullItems.length);
     const inactive = (await pool.query('SELECT m.id::int AS "memberId", m.name, lm.id::int AS "leagueMemberId" FROM member m JOIN league_member lm ON lm.member_id=m.id WHERE lm.league_id=$1 AND NOT m.is_active', [league.id])).rows;
     assert.ok(inactive.length > 0);
-    for (const item of full.items) assert.equal(item.members.some(member => inactive.some(row => row.memberId === member.memberId)), false);
+    for (const item of fullItems) assert.equal(item.members.some(member => inactive.some(row => row.memberId === member.memberId)), false);
 
     // Read all original rows (including forfeit, inactive, absent), then prove their exclusion does not affect results.
     let raw;
@@ -114,6 +127,9 @@ async function main() {
       const result = await pool.query(expandedSql, values); raw = result.rows[0]; return result;
     } }, league.id, 20);
     assert.deepEqual(calculateWinningCombinations(raw, league.id, 20), top20);
+    const legacySeptember = { ...raw, games: raw.games.map(game => [99, 100, 101].includes(game.gameId)
+      ? { ...game, winnerTeamId: null, resultType: null } : game) };
+    assert.deepEqual(calculateWinningCombinations(legacySeptember, league.id, 20), top20);
     const forfeits = raw.games.filter(game => game.resultType === 'FORFEIT');
     assert.ok(forfeits.length > 0);
     assert.deepEqual(calculateWinningCombinations({ ...raw, games: raw.games.filter(game => game.resultType !== 'FORFEIT') }, league.id, 20), top20);
@@ -128,7 +144,7 @@ async function main() {
       ON gd.league_id=t.league_id AND t.id IN(g.team_a_id,g.team_b_id) AND g.status='COMPLETED'
       AND COALESCE(g.result_type,'NORMAL')<>'FORFEIT' AND g.winner_team_id IN(g.team_a_id,g.team_b_id)
       WHERE t.league_id=$1 GROUP BY t.id ORDER BY t.sort_order`, [league.id])).rows;
-    const winner = top7.items[0];
+    const winner = top7.teams.find(team => team.teamName === '컬러').items[0];
     const presentDates = (await pool.query(`SELECT gd.id::int AS "gameDayId",to_char(gd.game_date,'YYYY-MM-DD') AS date,
       a.actual_team_id::int AS "actualTeamId",json_agg(json_build_object('leagueMemberId',lm.id,'name',m.name,'status',a.status,'originalTeamId',lm.team_id) ORDER BY lm.id) AS players
       FROM attendance a JOIN game_day gd ON gd.id=a.game_day_id JOIN league_member lm ON lm.id=a.league_member_id JOIN member m ON m.id=lm.member_id
@@ -149,13 +165,13 @@ async function main() {
     for (const url of ['/health', '/leagues', `/leagues/${league.id}`, `/leagues/${league.id}/games`, `/leagues/${league.id}/standings`, `/leagues/${league.id}/win-impact`, `/leagues/${league.id}/participants`, `/leagues/${league.id}/attendance/rates`, `/admin/leagues/${league.id}/games`, `/admin/leagues/${league.id}/attendance/dates`]) {
       await request(url, url.startsWith('/admin') ? cookie : null); regression[url] = 200;
     }
-    const report = { league, baseline, top7, top20Count: top20.items.length, allEligibleCount: eligible.length,
+    const report = { league, baseline, top7, top20Counts: top20.teams.map(team => ({ team: team.teamName, count: team.items.length })), allEligibleCount: eligible.length,
       excludedSmallSampleCount: sqlRows.length - eligible.length, twoWinsTwoGames: sqlRows.filter(row => row.gamesPlayed === 2 && row.wins === 2).length,
       inactive, movedAttendanceCount: moved, forfeits, invalidCompletedGames: raw.games.filter(game => game.status === 'COMPLETED' && game.winnerTeamId == null),
       presentDates, winnerGames, regression, duplicateAttendanceCount: duplicates.length };
     fs.mkdirSync(path.join(__dirname, '../../logs'), { recursive: true });
-    fs.writeFileSync(path.join(__dirname, '../../logs/winning-combinations-verification.json'), JSON.stringify(report, null, 2));
-    console.log(JSON.stringify({ ...report, top7: top7.items.map(item => ({ rank: item.rank, team: item.teamName, members: item.members.map(member => member.name).join(' · '), games: item.gamesPlayed, wins: item.wins, winRate: item.combinationWinRate, impact: item.winImpact })) }, null, 2));
+    fs.writeFileSync(path.join(__dirname, '../../logs/winning-combinations-team-verification.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify({ ...report, top7: top7.teams.flatMap(team => team.items).map(item => ({ rank: item.rank, team: item.teamName, members: item.members.map(member => member.name).join(' · '), games: item.gamesPlayed, wins: item.wins, winRate: item.combinationWinRate, impact: item.winImpact })) }, null, 2));
   } finally {
     if (testIds.length) await pool.query('DELETE FROM admin_account WHERE id=ANY($1::bigint[])', [testIds]);
     await pool.end();

@@ -1,3 +1,5 @@
+const { resolveWinnerTeamId } = require('./gameWinner');
+
 function createTeamStanding(team) {
   return {
     rank: 0,
@@ -16,14 +18,8 @@ function createTeamStanding(team) {
 }
 
 function getWinnerId(game) {
-  const homeId = Number(game.homeTeamId);
-  const awayId = Number(game.awayTeamId);
-  const winnerId = game.winnerTeamId === null ? null : Number(game.winnerTeamId);
-
-  if (winnerId === homeId || winnerId === awayId) return winnerId;
-  if (Number(game.homeScore) > Number(game.awayScore)) return homeId;
-  if (Number(game.awayScore) > Number(game.homeScore)) return awayId;
-  return null;
+  return resolveWinnerTeamId({ ...game, teamAId: game.homeTeamId, teamBId: game.awayTeamId,
+    teamAScore: game.homeScore, teamBScore: game.awayScore });
 }
 
 function compareWinRate(left, right) {

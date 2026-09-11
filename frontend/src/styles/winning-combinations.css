@@ -18,4 +18,13 @@
 .combination-comparison .negative{color:#c65b51}
 .winning-combinations-admin .combination-row{padding-block:7px}
 .winning-combinations-admin .combination-names{font-size:12px}
+.winning-combinations .combination-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.winning-combinations .combination-tabs button{min-height:36px;padding:7px 4px}
+.combination-baseline{display:flex;flex-direction:column;gap:4px;padding:11px 13px;margin-bottom:9px;box-shadow:none}
+.combination-baseline>strong{font-size:13px;color:var(--green)}
+.combination-baseline>span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.combination-baseline b{color:var(--ink);font:700 13px Manrope,sans-serif}
+.combination-empty-team{display:flex;flex-wrap:wrap;gap:8px;padding:13px 0;font-size:12px;color:var(--muted)}
+.combination-empty-team b{color:var(--green)}
+.combination-list>li+li{border-top:1px solid var(--line)}
 @media(max-width:390px){.combination-list{padding-inline:11px}.combination-row{grid-template-columns:27px minmax(0,1fr);gap:8px}}

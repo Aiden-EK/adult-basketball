@@ -1,3 +1,5 @@
+const { resolveWinnerTeamId } = require('./gameWinner');
+
 function round(value) {
   return value === null || value === undefined || !Number.isFinite(value) ? null : Math.round(value * 10) / 10;
 }
@@ -7,19 +9,14 @@ function rate(wins, games) {
 }
 
 function winnerId(game) {
-  if (game.winnerTeamId === game.teamAId || game.winnerTeamId === game.teamBId) return game.winnerTeamId;
-  if (game.teamAScore !== null && game.teamBScore !== null) {
-    if (Number(game.teamAScore) > Number(game.teamBScore)) return game.teamAId;
-    if (Number(game.teamBScore) > Number(game.teamAScore)) return game.teamBId;
-  }
-  return null;
+  return resolveWinnerTeamId({ status: 'COMPLETED', ...game });
 }
 
 function calculateWinImpact(rows, leagueId, minimumGames = 6) {
   const gamesById = new Map();
   for (const row of rows) {
     const gameId = Number(row.gameId);
-    if (!gamesById.has(gameId)) gamesById.set(gameId, { teamAId: Number(row.teamAId), teamBId: Number(row.teamBId), teamAScore: row.teamAScore == null ? null : Number(row.teamAScore), teamBScore: row.teamBScore == null ? null : Number(row.teamBScore), winnerTeamId: row.winnerTeamId == null ? null : Number(row.winnerTeamId) });
+    if (!gamesById.has(gameId)) gamesById.set(gameId, { resultType: row.resultType, teamAId: Number(row.teamAId), teamBId: Number(row.teamBId), teamAScore: row.teamAScore == null ? null : Number(row.teamAScore), teamBScore: row.teamBScore == null ? null : Number(row.teamBScore), winnerTeamId: row.winnerTeamId == null ? null : Number(row.winnerTeamId) });
   }
   const teamStats = new Map();
   for (const game of gamesById.values()) {
@@ -45,7 +42,7 @@ function calculateWinImpact(rows, leagueId, minimumGames = 6) {
       const key = `${teamId}`;
       if (!player.teams.has(key)) player.teams.set(key, { teamId, teamName: row[teamId === Number(row.teamAId) ? 'teamAName' : 'teamBName'], games: 0, wins: 0 });
       const team = player.teams.get(key);
-      const won = winnerId({ teamAId: Number(row.teamAId), teamBId: Number(row.teamBId), teamAScore: row.teamAScore == null ? null : Number(row.teamAScore), teamBScore: row.teamBScore == null ? null : Number(row.teamBScore), winnerTeamId: row.winnerTeamId == null ? null : Number(row.winnerTeamId) }) === teamId;
+      const won = winnerId({ resultType: row.resultType, teamAId: Number(row.teamAId), teamBId: Number(row.teamBId), teamAScore: row.teamAScore == null ? null : Number(row.teamAScore), teamBScore: row.teamBScore == null ? null : Number(row.teamBScore), winnerTeamId: row.winnerTeamId == null ? null : Number(row.winnerTeamId) }) === teamId;
       const participated = present && actualTeamId === teamId;
       if (!attendanceRecorded) continue;
       if (participated) {
@@ -91,12 +88,12 @@ function calculateWinImpact(rows, leagueId, minimumGames = 6) {
 async function readWinImpact(pool, leagueId) {
   const result = await pool.query(`
     SELECT lm.id AS "leagueMemberId", lm.member_id AS "memberId", m.name,
-      g.id AS "gameId",
+      g.id AS "gameId", g.result_type AS "resultType",
       g.team_a_id AS "teamAId", ta.name AS "teamAName", g.team_b_id AS "teamBId", tb.name AS "teamBName", g.team_a_score AS "teamAScore", g.team_b_score AS "teamBScore",
       g.winner_team_id AS "winnerTeamId", a.id IS NOT NULL AS "attendanceRecorded", a.status AS "attendanceStatus", a.actual_team_id AS "actualTeamId"
     FROM league_member lm
     JOIN member m ON m.id = lm.member_id AND m.is_active = TRUE
-    CROSS JOIN (SELECT g.id, gd.id AS game_day_id, g.team_a_id, g.team_b_id, g.team_a_score, g.team_b_score, g.winner_team_id, gd.game_date
+    CROSS JOIN (SELECT g.id, gd.id AS game_day_id, g.team_a_id, g.team_b_id, g.team_a_score, g.team_b_score, g.winner_team_id, g.result_type, gd.game_date
       FROM game g JOIN game_day gd ON gd.id = g.game_day_id
       WHERE gd.league_id = $1
         AND g.status = 'COMPLETED'

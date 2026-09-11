@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
         SELECT g.id AS "gameId", gd.game_date AS "gameDate", g.scheduled_at AS "scheduledAt", g.game_no AS "gameNo",
                g.team_a_id AS "homeTeamId", g.team_b_id AS "awayTeamId",
                g.team_a_score AS "homeScore", g.team_b_score AS "awayScore",
-               g.winner_team_id AS "winnerTeamId", g.status
+               g.winner_team_id AS "winnerTeamId", g.result_type AS "resultType", g.status
         FROM game g
         JOIN game_day gd ON gd.id = g.game_day_id
         JOIN team home ON home.id = g.team_a_id AND home.league_id = gd.league_id

@@ -1,3 +1,4 @@
+const { resolveWinnerTeamId } = require('./gameWinner');
 const MIN_COMBINATION_GAMES = 3;
 const MIN_COMBINATION_SIZE = 3;
 const round = value => Math.round(value * 10) / 10;
@@ -18,7 +19,8 @@ function isEligibleGame(game) {
 
 function calculateWinningCombinations({ teams, games, attendance }, leagueId, limit = 7) {
   const teamStats = new Map(teams.map(team => [team.teamId, { ...team, gamesPlayed: 0, wins: 0 }]));
-  const eligibleGames = [...new Map(games.filter(isEligibleGame).map(game => [game.gameId, game])).values()];
+  const resolvedGames = games.map(game => ({ ...game, winnerTeamId: resolveWinnerTeamId(game) }));
+  const eligibleGames = [...new Map(resolvedGames.filter(isEligibleGame).map(game => [game.gameId, game])).values()];
   // Baselines include every eligible team game, even dates without attendance.
   for (const game of eligibleGames) {
     for (const teamId of [game.teamAId, game.teamBId]) {
@@ -59,7 +61,20 @@ function calculateWinningCombinations({ teams, games, attendance }, leagueId, li
     }
   }
 
-  const items = [...combinations.values()].filter(item => item.gamesPlayed >= MIN_COMBINATION_GAMES).map(item => {
+  const eligibleCombinations = [...combinations.values()].filter(item => item.gamesPlayed >= MIN_COMBINATION_GAMES);
+  // When a larger roster produced the exact same record over the exact same
+  // games, show only the maximal combination. Smaller subsets add no new
+  // information and otherwise crowd the ranking with near-duplicates.
+  const suppressedKeys = new Set();
+  for (const item of eligibleCombinations) {
+    const ids = new Set(item.memberIds);
+    for (const larger of eligibleCombinations) {
+      if (larger.teamId !== item.teamId || larger.memberCount <= item.memberCount
+        || larger.gamesPlayed !== item.gamesPlayed || larger.wins !== item.wins) continue;
+      if (item.memberIds.every(id => ids.has(id) && larger.memberIds.includes(id))) suppressedKeys.add(item.key);
+    }
+  }
+  const items = eligibleCombinations.filter(item => !suppressedKeys.has(item.key)).map(item => {
     const team = teamStats.get(item.teamId);
     const combinationWinRate = item.wins / item.gamesPlayed * 100;
     const teamWinRate = team.wins / team.gamesPlayed * 100;
@@ -72,18 +87,22 @@ function calculateWinningCombinations({ teams, games, attendance }, leagueId, li
     };
   });
   // Compare unrounded fractions so display rounding cannot change ranking or ties.
-  items.sort((a, b) => {
+  const compareCombinations = (a, b) => {
     const aNumerator = a.wins * a.teamGamesPlayed - a.teamWins * a.gamesPlayed;
     const bNumerator = b.wins * b.teamGamesPlayed - b.teamWins * b.gamesPlayed;
     return bNumerator * a.gamesPlayed * a.teamGamesPlayed - aNumerator * b.gamesPlayed * b.teamGamesPlayed
       || b.wins * a.gamesPlayed - a.wins * b.gamesPlayed
       || b.wins - a.wins || b.gamesPlayed - a.gamesPlayed || a.memberCount - b.memberCount
-      || a.teamSortOrder - b.teamSortOrder
-      || (a.memberKey < b.memberKey ? -1 : a.memberKey > b.memberKey ? 1 : 0)
-      || a.teamId - b.teamId;
-  });
+      || (a.memberKey < b.memberKey ? -1 : a.memberKey > b.memberKey ? 1 : 0);
+  };
   return { leagueId: Number(leagueId), minGames: MIN_COMBINATION_GAMES,
-    items: items.slice(0, limit).map(({ memberKey, ...item }, index) => ({ rank: index + 1, ...item })) };
+    teams: [...teamStats.values()].sort((a, b) => a.teamSortOrder - b.teamSortOrder || a.teamId - b.teamId).map(team => ({
+      teamId: team.teamId, teamName: team.teamName, teamSortOrder: team.teamSortOrder,
+      teamGamesPlayed: team.gamesPlayed, teamWins: team.wins, teamLosses: team.gamesPlayed - team.wins,
+      teamWinRate: team.gamesPlayed ? round(team.wins / team.gamesPlayed * 100) : null,
+      items: items.filter(item => item.teamId === team.teamId).sort(compareCombinations).slice(0, limit)
+        .map(({ memberKey, ...item }, index) => ({ rank: index + 1, ...item }))
+    })) };
 }
 
 async function readWinningCombinations(pool, leagueId, limit) {
@@ -97,11 +116,11 @@ async function readWinningCombinations(pool, leagueId, limit) {
       (SELECT COALESCE(json_agg(g), '[]'::json) FROM (
         SELECT g.id AS "gameId", gd.id AS "gameDayId", g.team_a_id AS "teamAId",
           g.team_b_id AS "teamBId", g.winner_team_id AS "winnerTeamId",
+          g.team_a_score AS "teamAScore", g.team_b_score AS "teamBScore",
           g.status, g.result_type AS "resultType"
         FROM game g JOIN game_day gd ON gd.id = g.game_day_id
         WHERE gd.league_id = $1 AND g.status = 'COMPLETED'
           AND COALESCE(g.result_type, 'NORMAL') <> 'FORFEIT'
-          AND g.winner_team_id IN (g.team_a_id, g.team_b_id)
       ) g) AS games,
       (SELECT COALESCE(json_agg(a), '[]'::json) FROM (
         SELECT a.game_day_id AS "gameDayId", a.actual_team_id AS "actualTeamId", a.status,

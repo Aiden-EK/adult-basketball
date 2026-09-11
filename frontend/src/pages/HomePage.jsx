@@ -154,7 +154,7 @@ export default function HomePage() {
       <div className="section-head"><div><small>WIN IMPACT</small><h2>승리기여도 TOP 3</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=win-impact`}>전체보기 →</Link></div>
       <div className="win-impact-top3 card">{(winImpact?.players || []).filter(player => player.rankingEligible).slice(0, 3).map(player => <Link className="win-impact-top3-row" key={player.leagueMemberId} to={`/leagues/${league.id}?tab=win-impact`}><b>{player.rank}위</b><span><strong>{player.name}</strong><small>{player.games}경기 · {player.wins}승 {player.losses}패</small></span><strong className={player.winImpact > 0 ? 'positive' : player.winImpact < 0 ? 'negative' : ''}>{impact(player.winImpact)}</strong></Link>)}</div>
     </section>
-    <WinningCombinationsSection {...combinations} />
+    <WinningCombinationsSection {...combinations} leagueId={league.id} />
     <section className="home-section home-attendance-top">
       <div className="section-head"><div><small>ATTENDANCE</small><h2>출석왕 TOP 9</h2></div><Link className="text-link" to={`/leagues/${league.id}/attendance-ranking`}>전체보기 →</Link></div>
       <AttendanceTop data={attendanceRates} leagueId={league.id} />
