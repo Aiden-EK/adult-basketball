@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import PageTitle from '../../components/PageTitle'
 import { EmptyState, ErrorMessage, Loading } from '../../components/Status'
 import { getLeagues } from '../../services/leagueApi'
@@ -25,6 +25,7 @@ function prepareAttendance(data) {
         ...member,
         attendanceStatus: member.attendanceStatus || 'ABSENT',
         actualTeamId: member.attendanceStatus === 'PRESENT' ? member.actualTeamId : null,
+        attendanceGroup: getAttendanceGroup(member, teamById),
       }))
       .sort((left, right) => {
         const typeDifference = (memberTypeOrder[left.membershipType] ?? 2) - (memberTypeOrder[right.membershipType] ?? 2)
@@ -36,6 +37,13 @@ function prepareAttendance(data) {
         return teamDifference || left.name.localeCompare(right.name, 'ko') || Number(left.leagueMemberId) - Number(right.leagueMemberId)
       }),
   }
+}
+
+function getAttendanceGroup(member, teamById) {
+  if (member.membershipType === 'GUEST') return '게스트'
+  const teamId = member.attendanceStatus === 'PRESENT' && member.actualTeamId !== null ? member.actualTeamId : member.teamId
+  const teamName = teamById.get(Number(teamId))
+  return ['블랙', '화이트', '컬러'].includes(teamName) ? teamName : '컬러'
 }
 
 export default function AdminAttendancePage() {
@@ -178,26 +186,31 @@ export default function AdminAttendancePage() {
         </div>
         <p className="attendance-guide">참석 여부와 당일 출전팀을 선택하세요.</p>
         <div className="card attendance-list">
-          {data.members.map(member => {
+          {data.members.map((member, index) => {
             const isPresent = member.attendanceStatus === 'PRESENT'
             const isInvalid = invalidMemberIds.includes(member.leagueMemberId)
-            return <div className={`attendance-row${isPresent ? ' attendance-row-present' : ''}${isInvalid ? ' attendance-row-invalid' : ''}`} key={member.leagueMemberId}>
-              <label className="attendance-check">
-                <input type="checkbox" checked={isPresent} onChange={() => toggleAttendance(member.leagueMemberId)} />
-                <span>
-                  <b>{member.name}</b>
-                  <small className={member.membershipType === 'REGULAR' ? '' : 'guest-text'}>{member.membershipType === 'REGULAR' ? '정회원' : '게스트'}</small>
-                </span>
-              </label>
-              <div className="attendance-team-field">
-                <label className="sr-only" htmlFor={`actual-team-${member.leagueMemberId}`}>{member.name} 출전팀</label>
-                <select id={`actual-team-${member.leagueMemberId}`} value={member.actualTeamId || ''} disabled={!isPresent} aria-invalid={isInvalid} onChange={e => updateActualTeam(member.leagueMemberId, e.target.value)}>
-                  <option value="">미배정</option>
-                  {data.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
-                </select>
-                {isInvalid && <small>팀을 선택해주세요.</small>}
+            const group = member.attendanceGroup
+            const previousGroup = index > 0 ? data.members[index - 1].attendanceGroup : null
+            return <Fragment key={member.leagueMemberId}>
+              {group !== previousGroup && <div className="attendance-group-separator" aria-label={`${group} 그룹`}><span>{group}</span></div>}
+              <div className={`attendance-row${isPresent ? ' attendance-row-present' : ''}${isInvalid ? ' attendance-row-invalid' : ''}`}>
+                <label className="attendance-check">
+                  <input type="checkbox" checked={isPresent} onChange={() => toggleAttendance(member.leagueMemberId)} />
+                  <span>
+                    <b>{member.name}</b>
+                    <small className={member.membershipType === 'REGULAR' ? '' : 'guest-text'}>{member.membershipType === 'REGULAR' ? '정회원' : '게스트'}</small>
+                  </span>
+                </label>
+                <div className="attendance-team-field">
+                  <label className="sr-only" htmlFor={`actual-team-${member.leagueMemberId}`}>{member.name} 출전팀</label>
+                  <select id={`actual-team-${member.leagueMemberId}`} value={member.actualTeamId || ''} disabled={!isPresent} aria-invalid={isInvalid} onChange={e => updateActualTeam(member.leagueMemberId, e.target.value)}>
+                    <option value="">미배정</option>
+                    {data.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
+                  </select>
+                  {isInvalid && <small>팀을 선택해주세요.</small>}
+                </div>
               </div>
-            </div>
+            </Fragment>
           })}
         </div>
         <div className="attendance-save-bar">
