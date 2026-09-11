@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import PageTitle from '../../components/PageTitle'
 import { EmptyState, ErrorMessage, Loading } from '../../components/Status'
 import { getLeagues } from '../../services/leagueApi'
@@ -14,6 +14,11 @@ export default function AdminTeamsPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const sortedMembers = useMemo(() => [...(members || [])].sort((left, right) => {
+    const gradeOrder = (left.memberType === 'REGULAR' ? 0 : 1) - (right.memberType === 'REGULAR' ? 0 : 1)
+    return gradeOrder || left.name.localeCompare(right.name, 'ko')
+  }), [members])
 
   const load = useCallback(async selectedLeagueId => {
     if (!selectedLeagueId) return
@@ -84,7 +89,7 @@ export default function AdminTeamsPage() {
       <div className="team-add card"><input value={name} onChange={event => setName(event.target.value)} placeholder="팀 이름" /><button className="primary" onClick={add}>팀 추가</button></div>
       {teams === null ? <Loading /> : teams.length === 0 ? <EmptyState text="등록된 팀이 없습니다." /> : <div className="team-grid">{teams.map(team => <div className="card team-card" key={team.id}><div className="team-card-heading"><h3>{team.name} <small>{team.memberCount}명</small></h3><label className="captain-field"><span>👑 주장</span><select value={team.captainMemberId || ''} onChange={event => changeCaptain(team, event.target.value)} aria-label={`${team.name} 주장`}><option value="">미지정</option>{team.members.map(member => <option key={member.leagueMemberId} value={member.leagueMemberId}>{member.name}</option>)}</select></label></div><p className="muted">{team.members.map(member => member.name).join(' · ') || '배정된 참가자 없음'}</p><button className="secondary small-button" onClick={() => rename(team)}>이름 수정</button> <button className="secondary small-button" onClick={() => remove(team)}>삭제</button></div>)}</div>}
       <h2 className="section-title">참가자 팀 배정</h2>
-      {members && (members.length === 0 ? <EmptyState text="배정할 참가자가 없습니다." /> : <div className="card participant-list">{members.map(member => <label className="participant-row participant-assignment-row" key={member.memberId}><span><b>{member.name}</b><small className={member.memberType === 'REGULAR' ? '' : 'participant-guest'}>{member.memberType === 'REGULAR' ? '정회원' : '게스트'}</small></span><select aria-label={`${member.name} 팀`} value={member.teamId || ''} onChange={event => setMembers(current => current.map(item => item.memberId === member.memberId ? { ...item, teamId: event.target.value || null } : item))}><option value="">미배정</option>{(teams || []).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>)}</div>)}
+      {members && (members.length === 0 ? <EmptyState text="배정할 참가자가 없습니다." /> : <div className="card participant-list">{sortedMembers.map(member => <label className="participant-row participant-assignment-row" key={member.memberId}><span><b>{member.name}</b><small className={member.memberType === 'REGULAR' ? '' : 'participant-guest'}>{member.memberType === 'REGULAR' ? '정회원' : '게스트'}</small></span><select aria-label={`${member.name} 팀`} value={member.teamId || ''} onChange={event => setMembers(current => current.map(item => item.memberId === member.memberId ? { ...item, teamId: event.target.value || null } : item))}><option value="">미배정</option>{(teams || []).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>)}</div>)}
       <button className="primary full" disabled={saving || !members} onClick={save}>{saving ? '저장 중...' : '팀 배정 저장'}</button>
       {message && <p className="success">{message}</p>}
     </>}
