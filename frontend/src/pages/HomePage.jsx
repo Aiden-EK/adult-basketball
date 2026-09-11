@@ -6,6 +6,7 @@ import { ErrorMessage, Loading } from '../components/Status'
 import LeagueStatusBadge from '../components/LeagueStatusBadge'
 import StandingsList from '../components/StandingsList'
 import { selectCurrentLeague } from '../utils/league'
+import { buildAttendanceRanking, formatAttendanceRate } from '../utils/attendanceRanking'
 import '../styles/standings.css'
 import '../styles/home.css'
 import '../styles/win-impact.css'
@@ -89,20 +90,11 @@ function AttendanceTop({ data, leagueId }) {
   const participants = data?.participants || []
   if (!data || data.totalAttendanceDays === 0) return <div className="empty card home-attendance-top-empty"><p className="muted">아직 출석 기록이 없습니다.</p></div>
 
-  const sorted = [...participants].sort((left, right) => Number(right.attendanceRate) - Number(left.attendanceRate) || Number(right.attendanceCount) - Number(left.attendanceCount) || attendanceNameCollator.compare(left.name, right.name))
-  const top = sorted.slice(0, 9)
-  return <div className="attendance-top-list card">{top.map((participant, index) => {
-    const previous = top[index - 1]
-    const rank = previous && Number(previous.attendanceRate) === Number(participant.attendanceRate) && Number(previous.attendanceCount) === Number(participant.attendanceCount) ? previous.rank : index + 1
-    participant.rank = rank
-    const rate = Number(participant.attendanceRate)
-    const rateLabel = Number.isInteger(rate) ? `${rate}%` : `${rate.toFixed(1)}%`
-    return <Link className="attendance-top-row" key={participant.leagueMemberId} to={`/leagues/${leagueId}?tab=participants`}>
-      <b className="attendance-top-rank">{rank}위</b>
-      <span className="attendance-top-name"><strong>{participant.name}</strong>{participant.memberType === 'GUEST' && <small className="attendance-top-guest">게스트</small>}<small>{participant.attendanceCount} / {data.totalAttendanceDays}회 참석</small></span>
-      <strong className="attendance-top-rate">{rateLabel}</strong>
-    </Link>
-  })}</div>
+  const top = buildAttendanceRanking(participants).slice(0, 9)
+  return <div className="attendance-top-grid card">{top.map(participant => <Link className="attendance-top-cell" key={participant.leagueMemberId} to={`/leagues/${leagueId}/attendance-ranking`}>
+    <span className="attendance-top-cell-heading"><b>{participant.rank}위</b><strong className={participant.memberType === 'GUEST' ? 'attendance-top-guest' : ''}>{participant.name}</strong></span>
+    <span className="attendance-top-cell-metric"><strong>{formatAttendanceRate(participant.attendanceRate)}</strong><small>{participant.attendanceCount}/{data.totalAttendanceDays}</small></span>
+  </Link>)}</div>
 }
 
 export default function HomePage() {
@@ -160,7 +152,7 @@ export default function HomePage() {
       <div className="win-impact-top3 card">{(winImpact?.players || []).filter(player => player.rankingEligible).slice(0, 3).map(player => <Link className="win-impact-top3-row" key={player.leagueMemberId} to={`/leagues/${league.id}?tab=win-impact`}><b>{player.rank}위</b><span><strong>{player.name}</strong><small>{player.games}경기 · {player.wins}승 {player.losses}패</small></span><strong className={player.winImpact > 0 ? 'positive' : player.winImpact < 0 ? 'negative' : ''}>{impact(player.winImpact)}</strong></Link>)}</div>
     </section>
     <section className="home-section home-attendance-top">
-      <div className="section-head"><div><small>ATTENDANCE</small><h2>출석왕 TOP 9</h2></div><Link className="text-link" to={`/leagues/${league.id}?tab=participants`}>전체보기 →</Link></div>
+      <div className="section-head"><div><small>ATTENDANCE</small><h2>출석왕 TOP 9</h2></div><Link className="text-link" to={`/leagues/${league.id}/attendance-ranking`}>전체보기 →</Link></div>
       <AttendanceTop data={attendanceRates} leagueId={league.id} />
     </section>
     <section className="home-links">
