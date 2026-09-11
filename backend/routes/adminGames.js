@@ -101,6 +101,11 @@ router.patch('/:gameId', async (req, res) => {
   if (status === 'COMPLETED') {
     if (resultType === 'NORMAL') {
       if (homeScore !== awayScore) winnerTeamId = homeScore > awayScore ? homeTeamId : awayTeamId;
+      else {
+        if (!requestedWinnerTeamId) return res.status(400).json({ message: '점수가 같은 경우 승리팀을 지정해야 합니다.' });
+        if (![homeTeamId, awayTeamId].includes(requestedWinnerTeamId)) return res.status(400).json({ message: '승리팀은 해당 경기의 팀 중 하나여야 합니다.' });
+        winnerTeamId = requestedWinnerTeamId;
+      }
     } else {
       if (!requestedWinnerTeamId) return res.status(400).json({ message: resultType === 'FORFEIT' ? '몰수 경기의 승리팀을 선택해주세요.' : '동점 후 승부결정 경기의 승리팀을 선택해주세요.' });
       if (![homeTeamId, awayTeamId].includes(requestedWinnerTeamId)) return res.status(400).json({ message: '승리팀은 해당 경기의 팀 중 하나여야 합니다.' });

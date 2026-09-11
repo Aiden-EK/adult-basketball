@@ -24,7 +24,7 @@ function ResultPreview({ form, teams }) {
   if (!hasScores) return null
   const homeScore = Number(form.homeScore)
   const awayScore = Number(form.awayScore)
-  const winner = homeScore === awayScore ? '동점' : `🏆 ${selectedTeamName(teams, homeScore > awayScore ? form.homeTeamId : form.awayTeamId)} 승리`
+  const winner = homeScore === awayScore ? (form.winnerTeamId ? `🏆 ${selectedTeamName(teams, form.winnerTeamId)} 승리` : '점수 동률 · 승리팀 선택 필요') : `🏆 ${selectedTeamName(teams, homeScore > awayScore ? form.homeTeamId : form.awayTeamId)} 승리`
   return <div className="result-preview"><small>예상 결과</small><strong>{winner}</strong><span>{homeScore} : {awayScore}</span></div>
 }
 
@@ -81,6 +81,7 @@ export default function AdminGamesPage() {
     setError('')
     if (form.status === 'COMPLETED' && form.resultType === 'FORFEIT' && !form.winnerTeamId) { setError('몰수 경기의 승리팀을 선택해주세요.'); return }
     if (form.status === 'COMPLETED' && form.resultType === 'TIEBREAK' && !form.winnerTeamId) { setError('동점 후 승부결정 경기의 승리팀을 선택해주세요.'); return }
+    if (form.status === 'COMPLETED' && form.resultType === 'NORMAL' && form.homeScore !== '' && form.awayScore !== '' && Number(form.homeScore) === Number(form.awayScore) && !form.winnerTeamId) { setError('점수가 같습니다. 승리팀을 선택해주세요.'); return }
     setConfirmOpen(true)
   }
 
@@ -162,7 +163,7 @@ export default function AdminGamesPage() {
       {form.status === 'COMPLETED' && <>
         <div className="score-fields"><label>팀 1 점수<input type="number" min="0" step="1" value={form.homeScore} onChange={event => change('homeScore', event.target.value)} required /></label><label>팀 2 점수<input type="number" min="0" step="1" value={form.awayScore} onChange={event => change('awayScore', event.target.value)} required /></label></div>
         <label className="result-type-field">결과 유형<select value={form.resultType} onChange={event => change('resultType', event.target.value)} required><option value="">선택</option><option value="NORMAL">정상 경기</option><option value="TIEBREAK">동점 후 승부결정</option><option value="FORFEIT">몰수 경기</option></select></label>
-        {(form.resultType === 'FORFEIT' || form.resultType === 'TIEBREAK') && <label className="winner-field">승리팀<select value={form.winnerTeamId} onChange={event => change('winnerTeamId', event.target.value)} required><option value="">선택</option><option value={form.homeTeamId}>{selectedTeamName(teams, form.homeTeamId)}</option><option value={form.awayTeamId}>{selectedTeamName(teams, form.awayTeamId)}</option></select></label>}
+        {(form.resultType === 'FORFEIT' || form.resultType === 'TIEBREAK' || (form.resultType === 'NORMAL' && form.homeScore !== '' && form.awayScore !== '' && Number(form.homeScore) === Number(form.awayScore))) && <label className="winner-field">승리팀<select value={form.winnerTeamId} onChange={event => change('winnerTeamId', event.target.value)} required><option value="">선택</option><option value={form.homeTeamId}>{selectedTeamName(teams, form.homeTeamId)}</option><option value={form.awayTeamId}>{selectedTeamName(teams, form.awayTeamId)}</option></select></label>}
         <ResultPreview form={form} teams={teams} />
       </>}
       <div className="game-actions"><button type="button" className="secondary" onClick={reset}>취소</button><button className="primary" disabled={!teams.length}>수정 저장</button></div>
@@ -182,7 +183,7 @@ export default function AdminGamesPage() {
       </> : <>
         <h3 id="confirm-title">경기 결과를 저장하시겠습니까?</h3>
         <p className="confirm-score">{selectedTeamName(teams, form.homeTeamId)} {form.homeScore} : {form.awayScore} {selectedTeamName(teams, form.awayTeamId)}</p>
-        <p className="confirm-result">{form.resultType === 'FORFEIT' ? '결과: 몰수 경기' : form.resultType === 'TIEBREAK' ? '결과: 동점 후 승부결정' : '결과: 정상 경기'}<br />승리팀: {form.resultType === 'NORMAL' ? (form.homeScore === form.awayScore ? '동점' : selectedTeamName(teams, Number(form.homeScore) > Number(form.awayScore) ? form.homeTeamId : form.awayTeamId)) : selectedTeamName(teams, form.winnerTeamId)}</p>
+        <p className="confirm-result">{form.resultType === 'FORFEIT' ? '결과: 몰수 경기' : form.resultType === 'TIEBREAK' ? '결과: 동점 후 승부결정' : '결과: 정상 경기'}<br />승리팀: {form.resultType === 'NORMAL' ? (form.homeScore === form.awayScore ? selectedTeamName(teams, form.winnerTeamId) : selectedTeamName(teams, Number(form.homeScore) > Number(form.awayScore) ? form.homeTeamId : form.awayTeamId)) : selectedTeamName(teams, form.winnerTeamId)}</p>
         <div className="modal-actions"><button type="button" className="secondary" onClick={() => setConfirmOpen(false)}>취소</button><button type="button" className="primary" onClick={confirmSave}>저장</button></div>
       </>}
     </div></div>}
