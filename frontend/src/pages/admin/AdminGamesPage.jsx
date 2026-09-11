@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PageTitle from '../../components/PageTitle'
 import { ErrorMessage, Loading } from '../../components/Status'
 import { getLeagues } from '../../services/leagueApi'
@@ -11,6 +11,7 @@ const resultTypeLabels = { NORMAL: '정상 경기', TIEBREAK: '동점 후 승부
 const normalizedGameDate = value => String(value || '').slice(0, 10)
 const gameDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '일시 미정'
 const displayGameDate = game => gameDate(game.gameDate)
+const winnerName = game => String(game.winnerTeamId) === String(game.homeTeamId) ? game.homeTeamName : String(game.winnerTeamId) === String(game.awayTeamId) ? game.awayTeamName : '승리팀 미정'
 const valuesFromScores = data => Object.fromEntries(data.teams.flatMap(team => team.players.filter(player => player.hasScore).map(player => [player.leagueMemberId, player.points])))
 const selectedTeamName = (teams, teamId) => teams.find(team => String(team.id) === String(teamId))?.name || '팀 미정'
 
@@ -35,6 +36,7 @@ function DifferenceStatus({ total, gameScore, required }) {
 }
 
 export default function AdminGamesPage() {
+  const editFormRef = useRef(null)
   const [leagues, setLeagues] = useState([])
   const [leagueId, setLeagueId] = useState('')
   const [teams, setTeams] = useState([])
@@ -70,6 +72,7 @@ export default function AdminGamesPage() {
     setOriginalStatus(game.status)
     // game_date는 PostgreSQL DATE이므로 시간대 변환 없이 YYYY-MM-DD로 사용한다.
     setForm({ homeTeamId: String(game.homeTeamId), awayTeamId: String(game.awayTeamId), gameDate: normalizedGameDate(game.gameDate), status: game.status, homeScore: game.homeScore ?? '', awayScore: game.awayScore ?? '', resultType: game.status === 'COMPLETED' ? (game.resultType || 'NORMAL') : '', winnerTeamId: game.status === 'COMPLETED' && game.winnerTeamId ? String(game.winnerTeamId) : '' })
+    requestAnimationFrame(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
   const reset = () => { setEditing(null); setOriginalStatus(null); setForm(blank); setConfirmOpen(false) }
 
@@ -150,7 +153,7 @@ export default function AdminGamesPage() {
       <button className="primary game-submit" disabled={!teams.length}>3경기 추가</button>
     </form>}
 
-    {editing && <form className="card form game-form" onSubmit={save}>
+    {editing && <form ref={editFormRef} className="card form game-form game-edit-card" onSubmit={save}>
       <h3>경기 수정</h3>
       <label>팀 1<select value={form.homeTeamId} onChange={event => change('homeTeamId', event.target.value)} required><option value="">선택</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
       <label>팀 2<select value={form.awayTeamId} onChange={event => change('awayTeamId', event.target.value)} required><option value="">선택</option>{teams.filter(team => String(team.id) !== String(form.homeTeamId)).map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
@@ -202,6 +205,6 @@ export default function AdminGamesPage() {
       <button className="primary full" type="button" disabled={savingScores} onClick={saveScores}>{savingScores ? '저장 중...' : '개인 득점 저장'}</button>
     </section>}
 
-    {games === null ? <Loading /> : games.length === 0 ? <div className="empty card"><h3>등록된 경기가 없습니다.</h3></div> : <div className="game-list">{games.map(game => <article className="card game-card" key={game.gameId}><div className="game-card-head"><b>{game.gameNo}경기</b><span>{game.status === 'COMPLETED' ? '경기 종료' : '경기 예정'}</span><small>{displayGameDate(game)}</small></div><h3>{game.homeTeamName} {game.status === 'COMPLETED' ? `${game.homeScore} : ${game.awayScore}` : 'vs'} {game.awayTeamName}</h3>{game.status === 'COMPLETED' && <button className="secondary small-button" onClick={() => openScores(game)}>개인 득점</button>} <button className="secondary small-button" onClick={() => edit(game)}>수정</button> <button className="secondary small-button" onClick={() => remove(game)}>삭제</button></article>)}</div>}
+    {games === null ? <Loading /> : games.length === 0 ? <div className="empty card"><h3>등록된 경기가 없습니다.</h3></div> : <div className="game-list">{games.map(game => <article className="card game-card" key={game.gameId}><div className="game-card-head"><b>{game.gameNo}경기</b><span>{game.status === 'COMPLETED' ? '경기 종료' : '경기 예정'}</span><small>{displayGameDate(game)}</small></div><h3>{game.homeTeamName} {game.status === 'COMPLETED' ? `${game.homeScore} : ${game.awayScore}` : 'vs'} {game.awayTeamName}</h3>{game.status === 'COMPLETED' && game.resultType === 'FORFEIT' && <p className="forfeit-game-label">몰수 · {winnerName(game)} 승</p>}{game.status === 'COMPLETED' && <button className="secondary small-button" onClick={() => openScores(game)}>개인 득점</button>} <button className="secondary small-button" onClick={() => edit(game)}>수정</button> <button className="secondary small-button" onClick={() => remove(game)}>삭제</button></article>)}</div>}
   </>
 }

@@ -98,7 +98,9 @@ async function readWinImpact(pool, leagueId) {
     JOIN member m ON m.id = lm.member_id AND m.is_active = TRUE
     CROSS JOIN (SELECT g.id, gd.id AS game_day_id, g.team_a_id, g.team_b_id, g.team_a_score, g.team_b_score, g.winner_team_id, gd.game_date
       FROM game g JOIN game_day gd ON gd.id = g.game_day_id
-      WHERE gd.league_id = $1 AND g.status = 'COMPLETED') g
+      WHERE gd.league_id = $1
+        AND g.status = 'COMPLETED'
+        AND COALESCE(g.result_type, 'NORMAL') <> 'FORFEIT') g
     JOIN team ta ON ta.id = g.team_a_id
     JOIN team tb ON tb.id = g.team_b_id
     LEFT JOIN attendance a ON a.league_member_id = lm.id AND a.game_day_id = g.game_day_id
