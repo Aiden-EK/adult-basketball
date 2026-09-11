@@ -19,7 +19,10 @@ async function main() {
   let passed = false; requireAdmin({ user: { role: 'ADMIN' } }, response(), () => { passed = true }); assert.equal(passed, true);
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(server.indexOf("app.use('/api/admin', requireAdmin)") < server.indexOf("app.use('/api/admin/members'"));
-  assert.equal((server.match(/app\.use\('\/api\/admin(?!', requireAdmin)/g) || []).length, 7);
+  const adminGuardIndex = server.indexOf("app.use('/api/admin', requireAdmin)");
+  for (const route of server.matchAll(/app\.use\('\/api\/admin\//g)) {
+    assert.ok(route.index > adminGuardIndex, '모든 관리자 API는 인증 미들웨어 이후 등록되어야 합니다.');
+  }
   console.log('인증 단위 테스트 통과');
 }
 main().catch(error => { console.error(error); process.exitCode = 1 });
