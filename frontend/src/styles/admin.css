@@ -34,8 +34,21 @@
 .game-form .game-submit { grid-column: 2; grid-row: 4; align-self: end; width: 100%; margin-top: 18px; }
 .game-form .score-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .game-form .score-fields label { margin-top: 0; }
+.game-form .result-type-field, .game-form .winner-field, .game-form .result-preview { grid-column: 1 / -1; }
+.game-form .result-type-field, .game-form .winner-field { margin-top: 0; }
+.result-preview { display:grid; grid-template-columns: minmax(0, 1fr) auto; align-items:center; gap:2px 10px; margin-top:2px; padding:9px 11px; border:1px solid #b8dcc3; border-radius:10px; background:#f0faf3; color:#1f6c40; }
+.result-preview small { grid-column:1 / -1; color:#4b8962; font-size:11px; }
+.result-preview strong { min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:14px; }
+.result-preview span { color:#2f7e4d; font:800 13px Manrope; }
 .game-form .game-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 2px; }
 .game-form .game-actions button { width: 100%; min-height: 42px; margin: 0; }
+.modal-backdrop { position:fixed; z-index:20; inset:0; display:grid; place-items:center; padding:16px; background:#173b2d66; }
+.confirm-modal { width:min(100%, 360px); padding:18px; border-radius:16px; background:#fff; box-shadow:0 18px 48px #173b2d38; }
+.confirm-modal h3 { margin:0 0 14px; font-size:17px; }
+.confirm-score { margin:0; color:var(--ink); font-size:16px; font-weight:800; line-height:1.5; }
+.confirm-result { margin:10px 0 16px; color:var(--muted); font-size:13px; line-height:1.7; }
+.modal-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+.modal-actions button { width:100%; }
 .captain-field { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 6px; margin: 8px 0; font-size: 12px; font-weight: 700; }
 .captain-field select { width: 100%; }
 .attendance-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 6px; }
