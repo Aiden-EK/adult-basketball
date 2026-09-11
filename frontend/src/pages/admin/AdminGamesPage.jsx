@@ -65,7 +65,7 @@ export default function AdminGamesPage() {
   }, [])
 
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }))
-  const changeStatus = value => setForm(current => value === current.status ? current : ({ ...current, status: value, homeScore: '', awayScore: '', resultType: '', winnerTeamId: '' }))
+  const changeStatus = value => setForm(current => value === current.status ? current : ({ ...current, status: value, homeScore: '', awayScore: '', resultType: value === 'COMPLETED' ? (current.resultType || 'NORMAL') : '', winnerTeamId: '' }))
   const changeLeague = value => { setGames(null); setLeagueId(value); setScoresGame(null); load(value) }
   const edit = game => {
     setEditing(game.gameId)
