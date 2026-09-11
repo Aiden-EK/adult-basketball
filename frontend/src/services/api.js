@@ -8,7 +8,9 @@ function isProtectedRequest(path) {
 export async function apiRequest(path, options = {}) {
   let response
   try {
-    response = await fetch(`${API_BASE}${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options })
+    const requestOptions = { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options }
+    if (!requestOptions.cache && String(requestOptions.method || 'GET').toUpperCase() === 'GET') requestOptions.cache = 'no-store'
+    response = await fetch(`${API_BASE}${path}`, requestOptions)
   } catch {
     const error = new Error(CONNECTION_ERROR)
     error.status = 0
