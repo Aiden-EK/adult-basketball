@@ -4,7 +4,7 @@ const percent = value => value === null || value === undefined ? '-' : `${Number
 const impact = value => value === null || value === undefined ? '비교 데이터 없음' : `${value > 0 ? '+' : ''}${Number(value).toFixed(1)}%p`
 
 function TeamDetail({ team, playerName }) {
-  return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>팀 전체</b> {team.teamGames}경기 · {team.teamWins}승 {team.teamLosses}패 · {percent(team.teamWinRate)}</span><span><b>{playerName} 참가</b> {team.participatedGames}경기 · {team.participatedWins}승 {team.participatedLosses}패 · {percent(team.participatedWinRate)}</span><strong className={team.winImpact > 0 ? 'positive' : team.winImpact < 0 ? 'negative' : ''}>팀 평균 대비 {impact(team.winImpact)}</strong></div></div>
+  return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>팀 전체</b> {team.teamGames}경기 · {team.teamWins}승 {team.teamLosses}패 · {percent(team.teamWinRate)}</span><span className="win-impact-participation"><b>{playerName} 참가</b> {team.participatedGames}경기 · <em>{team.participatedWins}승</em> <em>{team.participatedLosses}패</em> · <em>{percent(team.participatedWinRate)}</em></span><strong className="win-impact-team-comparison">팀 평균 대비 {impact(team.winImpact)}</strong></div></div>
 }
 
 export default function WinImpactList({ players }) {
