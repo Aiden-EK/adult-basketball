@@ -40,8 +40,8 @@ export default function AttendanceRankingPage() {
     {error ? <ErrorMessage text={error} /> : !data ? <Loading /> : data.totalAttendanceDays === 0
       ? <div className="empty card attendance-ranking-no-data"><p className="muted">아직 출석 기록이 없습니다.</p></div>
       : <div className="attendance-ranking-groups">
-        <RankingGroup title={isAdmin ? '정회원 (관리자 전체조회)' : '정회원 TOP7'} type="REGULAR" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} limit={isAdmin ? undefined : 7} />
-        <RankingGroup title={isAdmin ? '게스트 (관리자 전체조회)' : '게스트 TOP7'} type="GUEST" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} limit={isAdmin ? undefined : 7} />
+        <RankingGroup title={isAdmin ? '정회원 (관리자 전체조회)' : '정회원 TOP10'} type="REGULAR" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} limit={isAdmin ? undefined : 10} />
+        <RankingGroup title={isAdmin ? '게스트 (관리자 전체조회)' : '게스트 TOP10'} type="GUEST" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} limit={isAdmin ? undefined : 10} />
       </div>}
   </>
 }
