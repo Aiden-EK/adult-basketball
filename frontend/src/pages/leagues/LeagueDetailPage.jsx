@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import PageTitle from '../../components/PageTitle'
 import { ErrorMessage, EmptyState, Loading } from '../../components/Status'
 import { getLeague, getLeagueScorers, getLeagueStandings, getLeagueWinner, getLeagueWinImpact } from '../../services/leagueApi'
+import { useAuth } from '../../auth/useAuth'
 import { getLeagueTeams } from '../../services/teamApi'
 import { getLeagueAttendance, getLeagueAttendanceRates, getLeagueAttendanceSummary, getLeagueGames, getPlayerScores } from '../../services/gameApi'
 import StandingsList from '../../components/StandingsList'
@@ -140,6 +141,8 @@ function ParticipantAttendanceRow({ participant, isCaptain }) {
 }
 
 export default function LeagueDetailPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
   const [winImpact, setWinImpact] = useState(null)
   const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [attendanceSummary, setAttendanceSummary] = useState({}); const [attendanceDetails, setAttendanceDetails] = useState({}); const [expandedAttendance, setExpandedAttendance] = useState(null); const [scores, setScores] = useState({}); const [participantSort, setParticipantSort] = useState('rate'); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
   useEffect(() => { getLeague(id).then(data => { const availableTabs = data.status === 'COMPLETED' ? completedTabs : activeTabs; const defaultTab = data.status === 'COMPLETED' ? 'winner' : 'standings'; setLeague(data); setTab(current => availableTabs.some(([key]) => key === current) ? current : defaultTab) }).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id])
@@ -162,7 +165,7 @@ export default function LeagueDetailPage() {
   const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
   const selectTab = key => { setTab(key); setSearchParams({ tab: key }, { replace: true }) }
   const content = tab === 'win-impact'
-    ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>승리기여도 Top7</h2><p>내가 참가한 경기의 승률이<br />해당 팀의 평균 승률보다 얼마나 높거나 낮은지 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={7} showInsufficient={false} /></>
+    ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>{isAdmin ? '승리기여도' : '승리기여도 TOP7'}</h2><p>내가 참가한 경기의 승률이<br />해당 팀의 평균 승률보다 얼마나 높거나 낮은지 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={isAdmin ? undefined : 7} showInsufficient={isAdmin} /></>
     : tab === 'standings'
     ? standings === null ? <Loading /> : <StandingsList standings={standings} />
     : tab === 'games'
