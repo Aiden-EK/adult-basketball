@@ -1,11 +1,11 @@
 # 운영 가이드
 
-이 문서는 Windows PC에서 어른이농구 서비스를 운영하는 절차입니다. 명령은 프로젝트 루트의 PowerShell에서 실행합니다. 실제 비밀번호, Cookie, DB 자격증명, 백업 파일과 현재 Quick Tunnel URL은 Git이나 공개 로그에 남기지 않습니다.
+이 문서는 Windows PC에서 어른이농구 서비스를 운영하는 절차입니다. 명령은 프로젝트 루트의 PowerShell에서 실행합니다. 실제 비밀번호, Cookie, DB 자격증명, 백업 파일과 Tunnel token은 Git이나 공개 로그에 남기지 않습니다.
 
 ## 1. 서비스 구조와 데이터 보존
 
 ```text
-외부 사용자 → Cloudflare Quick Tunnel HTTPS → tunnel → frontend(Nginx)
+외부 사용자 → https://kidultbasket.kr → Cloudflare Named Tunnel → tunnel → frontend(Nginx)
                                                      └→ /api → backend(Express) → db(PostgreSQL)
 ```
 
@@ -24,13 +24,15 @@ docker volume rm adult-basketball_postgres_data
 
 ## 2. 시작, 상태 확인과 안전한 재기동
 
+Windows 부팅 시 Docker Desktop을 자동 실행하지 않습니다. 사용자가 필요할 때 Docker Desktop을 직접 실행하며, 실행 이후에는 Compose의 `restart: unless-stopped` 정책으로 컨테이너가 복구됩니다. 시작프로그램, 작업 스케줄러 또는 별도 Windows 서비스로 Docker와 Compose를 자동 실행하지 않습니다.
+
 ```powershell
 docker compose up -d
 docker compose ps
 Invoke-RestMethod http://localhost:8080/api/health
 ```
 
-전체 서비스를 안전하게 재기동하려면 다음을 실행합니다. Quick Tunnel URL은 바뀔 수 있습니다.
+전체 서비스를 안전하게 재기동하려면 다음을 실행합니다. Named Tunnel의 공식 URL은 유지됩니다.
 
 ```powershell
 docker compose restart
@@ -56,9 +58,9 @@ docker compose logs --tail=100 tunnel
 
 실시간 확인에는 각 명령 끝에 `-f`를 붙이고, 종료할 때 `Ctrl+C`를 누릅니다. 로그를 공유하기 전에 비밀번호, Cookie, token, DB credential이 없는지 확인합니다.
 
-## 4. Quick Tunnel 주소
+## 4. Named Tunnel 주소
 
-현재 공개 HTTPS 주소만 출력합니다.
+공식 HTTPS 주소와 연결 상태를 확인합니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/show-public-url.ps1
@@ -67,10 +69,11 @@ powershell -ExecutionPolicy Bypass -File scripts/show-public-url.ps1
 스크립트 없이 확인하려면 다음을 사용합니다.
 
 ```powershell
-docker compose logs --no-color tunnel | Select-String 'https://[a-z0-9-]+\.trycloudflare\.com' | Select-Object -Last 1
+docker compose ps tunnel
+Invoke-RestMethod https://kidultbasket.kr/api/health
 ```
 
-Tunnel 프로세스가 계속 유지되면 기존 URL도 유지될 수 있지만, 재생성·재시작 시 새 URL이 발급될 수 있습니다. 재기동 후에는 반드시 주소를 다시 확인해 외부 접속을 시험하고, 변경됐다면 사용자에게 새 HTTPS 주소를 공유합니다. 이번 운영 방식에서는 도메인 구매나 Named Tunnel 전환을 하지 않습니다.
+Tunnel은 `kidultbasket-production` Named Tunnel을 사용합니다. `.env`의 `CLOUDFLARE_TUNNEL_TOKEN`을 Git에 추가하지 않습니다. 재기동 후에는 공식 URL과 `/api/health`를 확인합니다.
 
 ## 5. 관리자 계정 관리
 
@@ -95,7 +98,7 @@ npm --prefix backend run setup:admin
 3. 화면에 표시되지 않는 비밀번호를 입력합니다.
 4. `관리자 계정이 생성되었습니다.` 메시지를 확인합니다.
 5. 아래 목록 명령으로 계정이 표시되는지 확인합니다.
-6. 현재 Quick Tunnel HTTPS 주소의 `/login`에서 로그인합니다.
+6. `https://kidultbasket.kr/login`에서 로그인합니다.
 7. 관리자 페이지 접근과 로그아웃을 확인합니다.
 
 동일 ID의 계정은 덮어쓰지 않고 거부됩니다. 실제 비밀번호를 명령줄 인수, 문서, 로그에 적지 않습니다.
@@ -219,18 +222,18 @@ Invoke-RestMethod http://localhost:8080/api/health
 4. 필요하면 CLI로 비밀번호를 변경합니다. 변경하면 기존 세션은 모두 만료됩니다.
 5. Backend 로그에는 비밀번호나 Cookie를 남기지 않습니다.
 
-### G. Quick Tunnel 주소가 변경됨
+### G. 공식 도메인에 접속할 수 없음
 
 1. `docker compose ps tunnel`이 healthy인지 확인합니다.
-2. `scripts/show-public-url.ps1`로 새 주소를 확인합니다.
-3. 새 주소에서 `/`와 `/api/health`를 시험합니다.
-4. 사용자에게 새 HTTPS 주소를 공유합니다.
+2. `scripts/show-public-url.ps1`로 공식 주소와 상태를 확인합니다.
+3. Cloudflare에서 `kidultbasket.kr` Published Application Route가 `http://frontend:80`을 가리키는지 확인합니다.
+4. 공식 주소에서 `/`와 `/api/health`를 시험합니다.
 
 ## 9. 자주 발생하는 문제와 주의사항
 
 - Docker Desktop이 시작되지 않으면 모든 Compose 명령이 실패합니다.
 - Backend/DB 포트는 인터넷에 공개하거나 공유기 포트포워딩하지 않습니다.
-- Quick Tunnel은 임시 주소이므로 재기동 후 URL 확인을 생략하지 않습니다.
+- Named Tunnel 재기동 후 공식 URL과 `/api/health`를 확인합니다.
 - 자동 Pull은 활성화하지 않습니다. 배포 전 현재 branch와 commit을 직접 확인합니다.
 - 백업 성공 메시지만 믿지 말고 파일 크기와 주기적인 복구 시험 결과를 확인합니다.
-- `.env`, `backups/`, 실제 URL, 관리자 정보는 Git에 추가하지 않습니다.
+- `.env`, `backups/`, Tunnel token, 관리자 정보는 Git에 추가하지 않습니다.

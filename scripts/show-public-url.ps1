@@ -2,11 +2,13 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $projectRoot
 try {
-    $logs = & docker compose logs --no-color tunnel 2>&1
-    if ($LASTEXITCODE -ne 0) { throw 'Could not read cloudflared logs.' }
-    $matches = [regex]::Matches(($logs -join "`n"), 'https://[a-z0-9-]+\.trycloudflare\.com')
-    if ($matches.Count -eq 0) { throw 'Could not find the current Quick Tunnel URL. Check the tunnel status and logs.' }
-    Write-Output $matches[$matches.Count - 1].Value
+    $status = & docker compose ps tunnel --format '{{.State}} {{.Health}}' 2>&1
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the cloudflared container status.' }
+    if (($status -join ' ') -notmatch '^running healthy$') { throw "Named Tunnel is not healthy: $status" }
+    $url = 'https://kidultbasket.kr'
+    $health = Invoke-RestMethod "$url/api/health"
+    if ($health.status -ne 'UP' -or $health.database -ne 'UP') { throw 'The public health endpoint is not ready.' }
+    Write-Output $url
 }
 catch {
     Write-Error $_.Exception.Message
