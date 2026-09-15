@@ -7,10 +7,11 @@ function TeamDetail({ team, playerName }) {
   return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>팀 전체</b> {team.teamGames}경기 · {team.teamWins}승 {team.teamLosses}패 · {percent(team.teamWinRate)}</span><span className="win-impact-participation"><b>{playerName} 참가</b> {team.participatedGames}경기 · <em>{team.participatedWins}승</em> <em>{team.participatedLosses}패</em> · <em>{percent(team.participatedWinRate)}</em></span><strong className="win-impact-team-comparison">팀 평균 대비 {impact(team.winImpact)}</strong></div></div>
 }
 
-export default function WinImpactList({ players }) {
+export default function WinImpactList({ players, eligibleLimit, showInsufficient = true }) {
   const [expandedMemberIds, setExpandedMemberIds] = useState(() => new Set())
   if (!players?.length) return <div className="empty card"><p className="muted">승리기여도를 계산할 완료 경기와 출석 데이터가 없습니다.</p></div>
-  const eligiblePlayers = players.filter(player => player.rankingEligible)
+  const rankedPlayers = players.filter(player => player.rankingEligible)
+  const eligiblePlayers = eligibleLimit == null ? rankedPlayers : rankedPlayers.slice(0, eligibleLimit)
   const insufficientPlayers = players.filter(player => !player.rankingEligible)
   const togglePlayer = memberId => setExpandedMemberIds(previous => {
     const next = new Set(previous)
@@ -25,7 +26,7 @@ export default function WinImpactList({ players }) {
     <div className="win-impact-metrics"><span>참가 승률 <b>{percent(player.winRate)}</b></span><span>팀 평균 <b>{percent(player.teamAverageWinRate)}</b></span></div>
     {expandedMemberIds.has(player.leagueMemberId) && <div className="win-impact-teams">{player.teams.map(team => <TeamDetail team={team} playerName={player.name} key={team.teamId} />)}</div>}
   </article>
-  return <div className="win-impact-sections"><div className="win-impact-list">{eligiblePlayers.map(renderPlayer)}</div>{insufficientPlayers.length > 0 && <section className="win-impact-insufficient"><div className="win-impact-subheading"><small>INSUFFICIENT SAMPLE</small><b>표본 부족</b></div><div className="win-impact-list">{insufficientPlayers.map(renderPlayer)}</div></section>}</div>
+  return <div className="win-impact-sections"><div className="win-impact-list">{eligiblePlayers.map(renderPlayer)}</div>{showInsufficient && insufficientPlayers.length > 0 && <section className="win-impact-insufficient"><div className="win-impact-subheading"><small>INSUFFICIENT SAMPLE</small><b>표본 부족</b></div><div className="win-impact-list">{insufficientPlayers.map(renderPlayer)}</div></section>}</div>
 }
 
 export { impact }
