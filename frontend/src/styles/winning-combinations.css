@@ -5,6 +5,10 @@
 .combination-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;padding:9px 0}
 .combination-row+.combination-row{border-top:1px solid var(--line)}
 .combination-first{background:var(--mint)}
+.home-combination-preview .combination-first{background:transparent}
+.home-combination-preview .combination-row{padding-block:10px}
+.home-combination-preview .combination-row:first-child{padding-top:9px}
+.home-combination-preview .combination-row:last-child{padding-bottom:9px}
 .combination-rank{color:var(--green);font-size:11px;white-space:nowrap;padding-top:2px}
 .combination-content{min-width:0}
 .combination-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
