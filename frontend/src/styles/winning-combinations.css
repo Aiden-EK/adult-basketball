@@ -1,6 +1,7 @@
 .winning-combinations{margin-top:20px}
 .winning-combinations .section-head{margin:0 0 4px}
 .combination-description{margin:0 0 9px;color:var(--muted);font-size:11px}
+.combination-note{margin:-4px 0 9px;color:var(--muted);font-size:10px;line-height:1.4}
 .combination-list{list-style:none;margin:0;padding:0 13px;box-shadow:none;overflow:hidden}
 .combination-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;padding:9px 0}
 .combination-row+.combination-row{border-top:1px solid var(--line)}
