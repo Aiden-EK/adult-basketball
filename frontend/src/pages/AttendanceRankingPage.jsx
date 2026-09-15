@@ -4,15 +4,16 @@ import PageTitle from '../components/PageTitle'
 import { ErrorMessage, Loading } from '../components/Status'
 import { getLeagueAttendanceRates } from '../services/gameApi'
 import { buildAttendanceRanking, formatAttendanceRate } from '../utils/attendanceRanking'
+import { useAuth } from '../auth/useAuth'
 import '../styles/attendance-ranking.css'
 
-function RankingGroup({ title, type, participants, totalAttendanceDays }) {
+function RankingGroup({ title, type, participants, totalAttendanceDays, limit }) {
   const ranking = buildAttendanceRanking(participants.filter(participant => participant.memberType === type))
-  const visibleRanking = ranking.slice(0, 7)
+  const visibleRanking = limit == null ? ranking : ranking.slice(0, limit)
   const isGuest = type === 'GUEST'
 
   return <section className="attendance-ranking-group">
-    <div className="attendance-ranking-heading"><h2 className={isGuest ? 'attendance-ranking-guest' : ''}>{title} TOP 7</h2><span>{visibleRanking.length}명</span></div>
+    <div className="attendance-ranking-heading"><h2 className={isGuest ? 'attendance-ranking-guest' : ''}>{title}</h2><span>{visibleRanking.length}명</span></div>
     {visibleRanking.length === 0
       ? <div className="empty card attendance-ranking-empty"><p className="muted">등록된 {title}이 없습니다.</p></div>
       : <div className="attendance-ranking-list card">{visibleRanking.map(participant => <article className="attendance-ranking-row" key={participant.leagueMemberId}>
@@ -25,6 +26,8 @@ function RankingGroup({ title, type, participants, totalAttendanceDays }) {
 
 export default function AttendanceRankingPage() {
   const { id } = useParams()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
@@ -37,8 +40,8 @@ export default function AttendanceRankingPage() {
     {error ? <ErrorMessage text={error} /> : !data ? <Loading /> : data.totalAttendanceDays === 0
       ? <div className="empty card attendance-ranking-no-data"><p className="muted">아직 출석 기록이 없습니다.</p></div>
       : <div className="attendance-ranking-groups">
-        <RankingGroup title="정회원" type="REGULAR" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} />
-        <RankingGroup title="게스트" type="GUEST" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} />
+        <RankingGroup title={isAdmin ? '정회원 (관리자 전체조회)' : '정회원 TOP7'} type="REGULAR" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} limit={isAdmin ? undefined : 7} />
+        <RankingGroup title={isAdmin ? '게스트 (관리자 전체조회)' : '게스트 TOP7'} type="GUEST" participants={data.participants} totalAttendanceDays={data.totalAttendanceDays} limit={isAdmin ? undefined : 7} />
       </div>}
   </>
 }
