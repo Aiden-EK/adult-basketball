@@ -64,10 +64,10 @@ assert.equal(ranking.teams[0].items[0].rank, 1);
 assert.equal(ranking.teams[1].items[0].rank, 1);
 
 const allSizes = calculate(sameDay, attendance([10], [1, 2, 3, 4, 5, 6, 7, 8]));
-assert.equal(allSizes.items.length, 1);
-assert.equal(allSizes.items[0].memberCount, 8);
-assert.equal(allSizes.items[0].key, '1:1-2-3-4-5-6-7-8');
-assert.deepEqual(calculate(sameDay, attendance([10], [8, 7, 6, 5, 4, 3, 2, 1]), 7).items, allSizes.items);
+assert.equal(allSizes.items.length, 219);
+assert.equal(allSizes.items[0].memberCount, 3);
+assert.equal(allSizes.items[0].key, '1:1-2-3');
+assert.deepEqual(calculate(sameDay, attendance([10], [8, 7, 6, 5, 4, 3, 2, 1]), 7).items, allSizes.items.slice(0, 7));
 
 // Each team has distinct triple-only dates, proving limit is per team rather than global.
 function perTeamFixture(counts) {

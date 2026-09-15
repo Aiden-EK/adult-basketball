@@ -21,7 +21,10 @@ const gameDateKey = game => String(game.gameDate || '').slice(0, 10)
 const attendanceTeamOrder = ['블랙', '화이트', '컬러']
 const attendanceNameCollator = new Intl.Collator('ko-KR')
 const isWinner = (game, teamId) => {
-  if (game?.status !== 'COMPLETED' || game.homeScore == null || game.awayScore == null) return false
+  if (game?.status !== 'COMPLETED') return false
+  const winnerTeamId = game.winnerTeamId == null ? null : Number(game.winnerTeamId)
+  if ([Number(game.homeTeam.id), Number(game.awayTeam.id)].includes(winnerTeamId)) return Number(teamId) === winnerTeamId
+  if ((game.resultType || 'NORMAL') !== 'NORMAL' || game.homeScore == null || game.awayScore == null) return false
   const homeScore = Number(game.homeScore)
   const awayScore = Number(game.awayScore)
   if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore) || homeScore === awayScore) return false
@@ -78,11 +81,14 @@ function RecentGames({ games, attendance }) {
     <div className="home-game-rows">{games.map(game => {
       const homeWon = isWinner(game, game.homeTeam.id)
       const awayWon = isWinner(game, game.awayTeam.id)
+      const winnerName = homeWon ? game.homeTeam.name : awayWon ? game.awayTeam.name : null
       return <div className="home-game-row" key={game.gameId}>
         <b className="home-game-number">{game.gameNo}경기</b>
         <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
         <b className="home-game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b>
         <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
+        {game.resultType === 'FORFEIT' && winnerName && <small className="home-game-result">몰수 · {winnerName} 승</small>}
+        {game.resultType === 'TIEBREAK' && winnerName && <small className="home-game-result">동점 후 승부결정 · {winnerName} 승</small>}
       </div>
     })}</div><RecentAttendance attendance={attendance} />
   </article>

@@ -62,19 +62,7 @@ function calculateWinningCombinations({ teams, games, attendance }, leagueId, li
   }
 
   const eligibleCombinations = [...combinations.values()].filter(item => item.gamesPlayed >= MIN_COMBINATION_GAMES);
-  // When a larger roster produced the exact same record over the exact same
-  // games, show only the maximal combination. Smaller subsets add no new
-  // information and otherwise crowd the ranking with near-duplicates.
-  const suppressedKeys = new Set();
-  for (const item of eligibleCombinations) {
-    const ids = new Set(item.memberIds);
-    for (const larger of eligibleCombinations) {
-      if (larger.teamId !== item.teamId || larger.memberCount <= item.memberCount
-        || larger.gamesPlayed !== item.gamesPlayed || larger.wins !== item.wins) continue;
-      if (item.memberIds.every(id => ids.has(id) && larger.memberIds.includes(id))) suppressedKeys.add(item.key);
-    }
-  }
-  const items = eligibleCombinations.filter(item => !suppressedKeys.has(item.key)).map(item => {
+  const items = eligibleCombinations.map(item => {
     const team = teamStats.get(item.teamId);
     const combinationWinRate = item.wins / item.gamesPlayed * 100;
     const teamWinRate = team.wins / team.gamesPlayed * 100;

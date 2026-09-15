@@ -62,7 +62,7 @@ router.put('/:attendanceDate', async (req, res) => {
       const row = participant.rows[0];
       await client.query(`INSERT INTO attendance (game_day_id, member_id, league_member_id, actual_team_id, grade_snapshot, status)
         VALUES ($1,$2,$3,$4,$5,$6)
-        ON CONFLICT (game_day_id, league_member_id) DO UPDATE SET status=EXCLUDED.status, actual_team_id=EXCLUDED.actual_team_id, grade_snapshot=EXCLUDED.grade_snapshot, updated_at=CURRENT_TIMESTAMP`, [day.rows[0].id, row.member_id, item.leagueMemberId, item.actualTeamId, row.grade, item.status]);
+        ON CONFLICT (game_day_id, league_member_id) DO UPDATE SET status=EXCLUDED.status, actual_team_id=EXCLUDED.actual_team_id, updated_at=CURRENT_TIMESTAMP`, [day.rows[0].id, row.member_id, item.leagueMemberId, item.actualTeamId, row.grade, item.status]);
     }
     await client.query('COMMIT'); res.json({ leagueId, attendanceDate, attendance });
   } catch (error) { await client.query('ROLLBACK'); console.error('Attendance save failed:', error); res.status(500).json({ message: '출석 정보를 저장하지 못했습니다.' }); } finally { client.release(); }

@@ -19,7 +19,10 @@ const completedTabs = [['winner', '우승팀'], ['standings', '최종 순위'], 
 const allTabs = [...new Set([...activeTabs, ...completedTabs].map(([key]) => key))]
 const formatDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정'
 const isWinner = (game, teamId) => {
-  if (game.status !== 'COMPLETED' || game.homeScore == null || game.awayScore == null) return false
+  if (game.status !== 'COMPLETED') return false
+  const winnerTeamId = game.winnerTeamId == null ? null : Number(game.winnerTeamId)
+  if ([Number(game.homeTeam.id), Number(game.awayTeam.id)].includes(winnerTeamId)) return Number(teamId) === winnerTeamId
+  if ((game.resultType || 'NORMAL') !== 'NORMAL' || game.homeScore == null || game.awayScore == null) return false
   const homeScore = Number(game.homeScore)
   const awayScore = Number(game.awayScore)
   if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore) || homeScore === awayScore) return false
@@ -165,7 +168,7 @@ export default function LeagueDetailPage() {
   const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
   const selectTab = key => { setTab(key); setSearchParams({ tab: key }, { replace: true }) }
   const content = tab === 'win-impact'
-    ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>{isAdmin ? '승리기여도(관리자 전체조회)' : '승리기여도 TOP7'}</h2><p>내가 참가한 경기의 승률이<br />해당 팀의 평균 승률보다 얼마나 높거나 낮은지 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={isAdmin ? undefined : 7} showInsufficient={isAdmin} /></>
+    ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>{isAdmin ? '승리기여도(관리자 전체조회)' : '승리기여도 TOP7'}</h2><p>같은 팀에서 내가 참가한 경기 승률과<br />미참가 경기 승률의 차이를 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={isAdmin ? undefined : 7} showInsufficient={isAdmin} /></>
     : tab === 'standings'
     ? standings === null ? <Loading /> : <StandingsList standings={standings} />
     : tab === 'games'
@@ -175,12 +178,15 @@ export default function LeagueDetailPage() {
           const expanded = scores[game.gameId]
           const homeWon = isWinner(game, game.homeTeam.id)
           const awayWon = isWinner(game, game.awayTeam.id)
+          const winnerName = homeWon ? game.homeTeam.name : awayWon ? game.awayTeam.name : null
           return <section className="game-row" key={game.gameId}>
             <div className="game-row-main"><b className="game-number">{game.gameNo}경기</b><div className="game-match">
               <strong className={homeWon ? 'game-winner' : ''} title={game.homeTeam.name}>{game.homeTeam.name}</strong>
               {game.status === 'COMPLETED' ? <b className="game-score"><span className={homeWon ? 'game-winner' : ''}>{game.homeScore}</span><i>:</i><span className={awayWon ? 'game-winner' : ''}>{game.awayScore}</span></b> : <b className="game-vs">VS</b>}
               <strong className={awayWon ? 'game-winner' : ''} title={game.awayTeam.name}>{game.awayTeam.name}</strong>
             </div><span className={`game-row-status ${game.status === 'COMPLETED' ? '' : 'scheduled'}`}>{game.status === 'COMPLETED' ? '종료' : '예정'}</span></div>
+            {game.resultType === 'FORFEIT' && winnerName && <p className="game-result-note">몰수 · {winnerName} 승</p>}
+            {game.resultType === 'TIEBREAK' && winnerName && <p className="game-result-note">동점 후 승부결정 · {winnerName} 승</p>}
             {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={Boolean(expanded)} onClick={() => showScores(game.gameId)}>개인 득점 보기 <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>}
             {expanded && <div className="score-details">{expanded.teams.map(team => <div className="score-team" key={team.teamId}><h4>{team.teamName}</h4>{team.players.filter(p => p.hasScore).map(p => <p key={p.leagueMemberId}><b>{p.name}</b><span>{p.points}점</span></p>)}{team.players.every(p => !p.hasScore) && <p className="muted">개인 득점 기록이 아직 입력되지 않았습니다.</p>}</div>)}</div>}
           </section>
