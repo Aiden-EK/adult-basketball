@@ -52,9 +52,10 @@ function calculateWinningCombinations({ teams, games, attendance }, leagueId, li
         const memberKey = memberIds.join('-');
         const key = `${teamId}:${memberKey}`;
         if (!combinations.has(key)) combinations.set(key, {
-          key, memberKey, teamId, memberIds, members, memberCount: members.length, gamesPlayed: 0, wins: 0
+          key, memberKey, teamId, memberIds, members, memberCount: members.length, gameIds: new Set(), gamesPlayed: 0, wins: 0
         });
         const combination = combinations.get(key);
+        combination.gameIds.add(String(game.gameId));
         combination.gamesPlayed += 1;
         if (game.winnerTeamId === teamId) combination.wins += 1;
       }
@@ -62,12 +63,24 @@ function calculateWinningCombinations({ teams, games, attendance }, leagueId, li
   }
 
   const eligibleCombinations = [...combinations.values()].filter(item => item.gamesPlayed >= MIN_COMBINATION_GAMES);
-  const items = eligibleCombinations.map(item => {
+  const suppressedKeys = new Set();
+  for (const item of eligibleCombinations) {
+    for (const larger of eligibleCombinations) {
+      if (larger.teamId !== item.teamId || larger.memberCount <= item.memberCount
+        || larger.gamesPlayed !== item.gamesPlayed || larger.wins !== item.wins
+        || item.memberIds.some(memberId => !larger.memberIds.includes(memberId))
+        || larger.gameIds.size !== item.gameIds.size
+        || [...larger.gameIds].some(gameId => !item.gameIds.has(gameId))) continue;
+      suppressedKeys.add(item.key);
+      break;
+    }
+  }
+  const items = eligibleCombinations.filter(item => !suppressedKeys.has(item.key)).map(item => {
     const team = teamStats.get(item.teamId);
     const combinationWinRate = item.wins / item.gamesPlayed * 100;
     const teamWinRate = team.wins / team.gamesPlayed * 100;
     return {
-      ...item, teamName: team.teamName, teamSortOrder: team.teamSortOrder,
+    ...item, teamName: team.teamName, teamSortOrder: team.teamSortOrder,
       losses: item.gamesPlayed - item.wins,
       combinationWinRate: round(combinationWinRate),
       teamGamesPlayed: team.gamesPlayed, teamWins: team.wins, teamLosses: team.gamesPlayed - team.wins,
@@ -89,7 +102,7 @@ function calculateWinningCombinations({ teams, games, attendance }, leagueId, li
       teamGamesPlayed: team.gamesPlayed, teamWins: team.wins, teamLosses: team.gamesPlayed - team.wins,
       teamWinRate: team.gamesPlayed ? round(team.wins / team.gamesPlayed * 100) : null,
       items: items.filter(item => item.teamId === team.teamId).sort(compareCombinations).slice(0, limit)
-        .map(({ memberKey, ...item }, index) => ({ rank: index + 1, ...item }))
+        .map(({ memberKey, gameIds, ...item }, index) => ({ rank: index + 1, ...item }))
     })) };
 }
 

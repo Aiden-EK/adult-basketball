@@ -45,11 +45,11 @@ const verificationSql = `WITH RECURSIVE
     FROM team t JOIN valid_games g ON t.id IN (g.team_a_id, g.team_b_id)
     WHERE t.league_id = $1 GROUP BY t.id
   ), totals AS (
-    SELECT s.team_id, s.ids, count(DISTINCT g.id)::int AS games,
+    SELECT s.team_id, s.ids, array_agg(DISTINCT g.id ORDER BY g.id) AS "gameIds", count(DISTINCT g.id)::int AS games,
       count(DISTINCT g.id) FILTER (WHERE g.winner_team_id = s.team_id)::int AS wins
     FROM subsets s JOIN valid_games g ON g.game_day_id = s.game_day_id AND s.team_id IN (g.team_a_id, g.team_b_id)
     WHERE cardinality(s.ids) >= 3 GROUP BY s.team_id, s.ids
-  ) SELECT t.team_id::int AS "teamId", b.name AS "teamName", t.ids AS "memberIds",
+  ) SELECT t.team_id::int AS "teamId", b.name AS "teamName", t.ids AS "memberIds", t."gameIds",
     t.games AS "gamesPlayed", t.wins, t.games - t.wins AS losses,
     b.games AS "teamGamesPlayed", b.wins AS "teamWins", b.games - b.wins AS "teamLosses",
     round(t.wins * 100.0 / t.games, 1)::float AS "combinationWinRate",
@@ -94,17 +94,27 @@ async function main() {
     await request(`${adminPath}?limit=21`, cookie, 400);
     top20.teams.forEach((team, index) => {
       assert.deepEqual(team.items.slice(0, 7), top7.teams[index].items);
-      assert.equal(team.items.length, 20);
+      assert.ok(team.items.length <= 20);
     });
     assert.equal(JSON.stringify(top7).includes('"note"'), false);
 
-    const sqlRows = (await pool.query(verificationSql, [league.id])).rows.map(row => ({ ...row, memberIds: row.memberIds.map(Number) }));
-    const eligible = sqlRows.filter(row => row.gamesPlayed >= 3);
+    const sqlRows = (await pool.query(verificationSql, [league.id])).rows.map(row => ({ ...row, memberIds: row.memberIds.map(Number), gameIds: row.gameIds.map(Number) }));
+    const eligibleRaw = sqlRows.filter(row => row.gamesPlayed >= 3);
+    const suppressed = new Set();
+    for (const item of eligibleRaw) for (const larger of eligibleRaw) {
+      if (larger.teamId !== item.teamId || larger.memberIds.length <= item.memberIds.length
+        || larger.gamesPlayed !== item.gamesPlayed || larger.wins !== item.wins
+        || item.memberIds.some(memberId => !larger.memberIds.includes(memberId))
+        || larger.gameIds.join('-') !== item.gameIds.join('-')) continue;
+      suppressed.add(item);
+      break;
+    }
+    const eligible = eligibleRaw.filter(item => !suppressed.has(item));
     const full = await readWinningCombinations(pool, league.id, Number.MAX_SAFE_INTEGER);
     const fullItems = full.teams.flatMap(team => team.items);
     assert.equal(fullItems.length, eligible.length);
     for (const team of full.teams) {
-      const expectedItems = eligible.filter(row => row.teamId === team.teamId);
+      const expectedItems = eligible.filter(row => row.teamId === team.teamId).map(({ gameIds, ...row }) => row);
       for (let i = 0; i < expectedItems.length; i += 1) {
         for (const key of Object.keys(expectedItems[i])) assert.deepEqual(team.items[i][key], expectedItems[i][key], `${team.teamName} ${i + 1}위 ${key}`);
         assert.equal(team.items[i].rank, i + 1);
@@ -166,7 +176,7 @@ async function main() {
       await request(url, url.startsWith('/admin') ? cookie : null); regression[url] = 200;
     }
     const report = { league, baseline, top7, top20Counts: top20.teams.map(team => ({ team: team.teamName, count: team.items.length })), allEligibleCount: eligible.length,
-      excludedSmallSampleCount: sqlRows.length - eligible.length, twoWinsTwoGames: sqlRows.filter(row => row.gamesPlayed === 2 && row.wins === 2).length,
+      suppressedSubcombinationCount: suppressed.size, excludedSmallSampleCount: sqlRows.length - eligibleRaw.length, twoWinsTwoGames: sqlRows.filter(row => row.gamesPlayed === 2 && row.wins === 2).length,
       inactive, movedAttendanceCount: moved, forfeits, invalidCompletedGames: raw.games.filter(game => game.status === 'COMPLETED' && game.winnerTeamId == null),
       presentDates, winnerGames, regression, duplicateAttendanceCount: duplicates.length };
     fs.mkdirSync(path.join(__dirname, '../../logs'), { recursive: true });

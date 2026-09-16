@@ -2,10 +2,10 @@ import { useState } from 'react'
 
 const percent = value => value === null || value === undefined ? '-' : `${Number(value).toFixed(1)}%`
 const impact = value => value === null || value === undefined ? '비교 데이터 없음' : `${value > 0 ? '+' : ''}${Number(value).toFixed(1)}%p`
-const displayImpact = item => item.allGamesAttended || (item.games > 0 && item.gamesWithoutPlayer === 0) ? '모든 경기 참석' : impact(item.winImpact)
+const displayImpact = item => impact(item.winImpact)
 
 function TeamDetail({ team, playerName }) {
-  return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>{playerName} 참가</b> {team.participatedGames}경기 · {team.participatedWins}승 {team.participatedLosses}패 · {percent(team.participatedWinRate)}</span><span className="win-impact-participation"><b>{playerName} 미참가</b> {team.gamesWithoutPlayer}경기 · <em>{team.winsWithoutPlayer}승</em> <em>{team.lossesWithoutPlayer}패</em> · <em>{percent(team.winRateWithoutPlayer)}</em></span><strong className="win-impact-team-comparison">참가-미참가 {displayImpact(team)}</strong></div></div>
+  return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>{playerName} 참가</b> {team.participatedGames}경기 · {team.participatedWins}승 {team.participatedLosses}패 · {percent(team.participatedWinRate)}</span><span className="win-impact-participation"><b>팀 전체</b> {team.teamGames}경기 · {team.teamWins}승 {team.teamLosses}패 · {percent(team.teamWinRate)}</span><strong className="win-impact-team-comparison">팀 평균 대비 {displayImpact(team)}</strong></div></div>
 }
 
 export default function WinImpactList({ players, eligibleLimit, showInsufficient = true }) {
@@ -24,7 +24,7 @@ export default function WinImpactList({ players, eligibleLimit, showInsufficient
     <button type="button" className="win-impact-summary" onClick={() => togglePlayer(player.leagueMemberId)} aria-expanded={expandedMemberIds.has(player.leagueMemberId)}>
       <b className="win-impact-rank">{player.rankingEligible ? `${player.rank}위` : '·'}</b><span className="win-impact-name"><strong>{player.name}</strong><small>{player.games}경기 · {player.wins}승 {player.losses}패{player.allGamesAttended ? ' · 모든 경기 참석' : !player.rankingEligible && ' · 표본 부족'}</small></span><strong className={`win-impact-value ${player.winImpact > 0 ? 'positive' : player.winImpact < 0 ? 'negative' : ''}`}>{displayImpact(player)}</strong><span className="win-impact-chevron">{expandedMemberIds.has(player.leagueMemberId) ? '▲' : '›'}</span>
     </button>
-    <div className="win-impact-metrics"><span>참가 승률 <b>{percent(player.winRate)}</b></span><span>미참가 승률 <b>{percent(player.winRateWithoutPlayer)}</b></span></div>
+    <div className="win-impact-metrics"><span>참가 승률 <b>{percent(player.winRate)}</b></span><span>팀 평균 <b>{percent(player.teamAverageWinRate)}</b></span></div>
     {expandedMemberIds.has(player.leagueMemberId) && <div className="win-impact-teams">{player.teams.map(team => <TeamDetail team={team} playerName={player.name} key={team.teamId} />)}</div>}
   </article>
   return <div className="win-impact-sections"><div className="win-impact-list">{eligiblePlayers.map(renderPlayer)}</div>{showInsufficient && insufficientPlayers.length > 0 && <section className="win-impact-insufficient"><div className="win-impact-subheading"><small>INSUFFICIENT SAMPLE</small><b>표본 부족</b></div><div className="win-impact-list">{insufficientPlayers.map(renderPlayer)}</div></section>}</div>

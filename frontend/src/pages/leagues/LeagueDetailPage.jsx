@@ -168,7 +168,7 @@ export default function LeagueDetailPage() {
   const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
   const selectTab = key => { setTab(key); setSearchParams({ tab: key }, { replace: true }) }
   const content = tab === 'win-impact'
-    ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>{isAdmin ? '승리기여도(관리자 전체조회)' : '승리기여도 TOP7'}</h2><p>같은 팀에서 내가 참가한 경기 승률과<br />미참가 경기 승률의 차이를 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={isAdmin ? undefined : 7} showInsufficient={isAdmin} /></>
+    ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>{isAdmin ? '승리기여도(관리자 전체조회)' : '승리기여도 TOP7'}</h2><p>내가 참가한 경기의 팀 승률과<br />팀 평균 승률의 차이를 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={isAdmin ? undefined : 7} showInsufficient={isAdmin} /></>
     : tab === 'standings'
     ? standings === null ? <Loading /> : <StandingsList standings={standings} />
     : tab === 'games'

@@ -64,10 +64,16 @@ assert.equal(ranking.teams[0].items[0].rank, 1);
 assert.equal(ranking.teams[1].items[0].rank, 1);
 
 const allSizes = calculate(sameDay, attendance([10], [1, 2, 3, 4, 5, 6, 7, 8]));
-assert.equal(allSizes.items.length, 219);
-assert.equal(allSizes.items[0].memberCount, 3);
-assert.equal(allSizes.items[0].key, '1:1-2-3');
-assert.deepEqual(calculate(sameDay, attendance([10], [8, 7, 6, 5, 4, 3, 2, 1]), 7).items, allSizes.items.slice(0, 7));
+assert.equal(allSizes.items.length, 1);
+assert.equal(allSizes.items[0].memberCount, 8);
+assert.equal(allSizes.items[0].key, '1:1-2-3-4-5-6-7-8');
+assert.deepEqual(calculate(sameDay, attendance([10], [8, 7, 6, 5, 4, 3, 2, 1]), 7).items, allSizes.items);
+
+const differentGameSets = calculate([
+  game(1, 1, { gameDayId: 10 }), game(2, 1, { gameDayId: 10 }), game(3, 1, { gameDayId: 10 }),
+  game(4, 1, { gameDayId: 11 }), game(5, 1, { gameDayId: 11 }), game(6, 1, { gameDayId: 11 })
+], [...attendance([10], [1, 2, 3]), ...attendance([11], [1, 2, 4])]);
+assert.deepEqual(new Set(differentGameSets.items.map(item => item.key)), new Set(['1:1-2-3', '1:1-2-4']));
 
 // Each team has distinct triple-only dates, proving limit is per team rather than global.
 function perTeamFixture(counts) {

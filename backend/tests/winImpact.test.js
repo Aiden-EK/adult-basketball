@@ -17,15 +17,16 @@ assert.equal(compared.games, 6);
 assert.equal(compared.wins, 4);
 assert.equal(compared.gamesWithoutPlayer, 2);
 assert.equal(compared.winRate, 66.7);
-assert.equal(compared.winRateWithoutPlayer, 0);
-assert.equal(compared.winImpact, 66.7);
+assert.equal(compared.teamAverageWinRate, 50);
+assert.equal(compared.winImpact, 16.7);
 assert.equal(compared.rankingEligible, true);
 const attendedAll = calculated.players.find(player => player.leagueMemberId === 11);
 assert.equal(attendedAll.games, 8);
 assert.equal(attendedAll.gamesWithoutPlayer, 0);
 assert.equal(attendedAll.allGamesAttended, true);
-assert.equal(attendedAll.winImpact, null);
-assert.equal(attendedAll.rankingEligible, false);
+assert.equal(attendedAll.teamAverageWinRate, 50);
+assert.equal(attendedAll.winImpact, 0);
+assert.equal(attendedAll.rankingEligible, true);
 
 async function run() {
   let queryText = '';
