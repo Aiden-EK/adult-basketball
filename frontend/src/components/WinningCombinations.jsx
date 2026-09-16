@@ -30,8 +30,6 @@ function CombinationRow({ item, showTeam = false }) {
 export function WinningCombinationsSection({ result, error, leagueId }) {
   return <section className="home-section winning-combinations home-combination-preview" aria-label="필승조합 미리보기">
     <div className="section-head"><div><small>WINNING COMBINATIONS</small><h2>필승조합</h2></div><Link className="text-link" to={`/leagues/${leagueId}/winning-combinations`}>전체보기 →</Link></div>
-    <p className="combination-description">팀별 1위 · 3인 이상 · 함께 출전 {result?.minGames ?? 3}경기 이상</p>
-    <p className="combination-note">몰수패/승 기록은 &quot;필승조합&quot; 승률에서는 제외됩니다.</p>
     {error ? <ErrorMessage text={error} /> : !result ? <Loading /> : !result.teams.length ? <div className="empty card"><p className="muted">아직 집계할 필승조합 데이터가 없습니다.</p></div> : <ul className="combination-list card">{orderedTeams(result.teams).map(team => team.items[0]
       ? <CombinationRow key={team.teamId} item={team.items[0]} showTeam />
       : <li className="combination-empty-team" key={team.teamId}><b>{team.teamName}</b><span>집계 가능한 조합 없음</span></li>)}</ul>}
