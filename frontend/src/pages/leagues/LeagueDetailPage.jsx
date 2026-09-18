@@ -76,7 +76,7 @@ function AttendanceSection({ summary, detail, expanded, onToggle }) {
   return <div className="game-day-attendance">
     <div className="attendance-summary">
       <span><b>참석 {summary.totalCount}명</b><i>·</i><span>정회원 {summary.memberCount}</span><i>·</i><span className="attendance-guest">게스트 {summary.guestCount}</span></span>
-      <button type="button" onClick={onToggle} aria-expanded={expanded}>참석자 {expanded ? '접기' : '보기'} <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>
+      <button type="button" onClick={onToggle} aria-expanded={expanded}>참석자 {expanded ? '접기' : '보기'} <span className={`chevron ${expanded ? 'chevron-up' : 'chevron-right'}`} aria-hidden="true" /></button>
     </div>
     {expanded && (detail === undefined
       ? <p className="attendance-loading">참석자를 불러오는 중...</p>
@@ -196,7 +196,7 @@ export default function LeagueDetailPage() {
             </div><span className={`game-row-status ${game.status === 'COMPLETED' ? '' : 'scheduled'}`}>{game.status === 'COMPLETED' ? '종료' : '예정'}</span></div>
             {game.resultType === 'FORFEIT' && winnerName && <p className="game-result-note">몰수 · {winnerName} 승</p>}
             {game.resultType === 'TIEBREAK' && winnerName && <p className="game-result-note">동점 후 승부결정 · {winnerName} 승</p>}
-            {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={expandedScoreGameIds.has(game.gameId)} onClick={() => toggleScores(game.gameId)}>개인 득점 보기 <span aria-hidden="true">{expandedScoreGameIds.has(game.gameId) ? '^' : '>'}</span></button>}
+            {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={expandedScoreGameIds.has(game.gameId)} onClick={() => toggleScores(game.gameId)}>개인 득점 보기 <span className={`chevron ${expandedScoreGameIds.has(game.gameId) ? 'chevron-up' : 'chevron-right'}`} aria-hidden="true" /></button>}
             {expanded && <div className="score-details">{expanded.teams.map(team => <div className="score-team" key={team.teamId}><h4>{team.teamName}</h4>{team.players.filter(p => p.hasScore).map(p => <p key={p.leagueMemberId}><b>{p.name}</b><span>{p.points}점</span></p>)}{team.players.every(p => !p.hasScore) && <p className="muted">개인 득점 기록이 아직 입력되지 않았습니다.</p>}</div>)}</div>}
           </section>
         })}</div>
