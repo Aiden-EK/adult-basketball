@@ -147,7 +147,7 @@ export default function LeagueDetailPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
   const [winImpact, setWinImpact] = useState(null)
-  const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [attendanceSummary, setAttendanceSummary] = useState({}); const [attendanceDetails, setAttendanceDetails] = useState({}); const [expandedAttendance, setExpandedAttendance] = useState(null); const [scores, setScores] = useState({}); const [participantSort, setParticipantSort] = useState('rate'); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
+  const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [attendanceSummary, setAttendanceSummary] = useState({}); const [attendanceDetails, setAttendanceDetails] = useState({}); const [expandedAttendance, setExpandedAttendance] = useState(null); const [scores, setScores] = useState({}); const [expandedScoreGameIds, setExpandedScoreGameIds] = useState(() => new Set()); const [participantSort, setParticipantSort] = useState('rate'); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
   useEffect(() => { getLeague(id).then(data => { const availableTabs = data.status === 'COMPLETED' ? completedTabs : activeTabs; const defaultTab = data.status === 'COMPLETED' ? 'winner' : 'standings'; setLeague(data); setTab(current => availableTabs.some(([key]) => key === current) ? current : defaultTab) }).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id])
   useEffect(() => {
     if (tab === 'standings') getLeagueStandings(id).then(data => setStandings(data.standings)).catch(() => setError('순위 정보를 불러오지 못했습니다.'))
@@ -162,7 +162,16 @@ export default function LeagueDetailPage() {
       .catch(() => setError('경기 정보를 불러오지 못했습니다.'))
   }, [id, tab])
   const grouped = teams.map(t => ({ ...t, members: sortParticipants(participants?.filter(p => Number(p.teamId) === Number(t.id)) || [], participantSort, t.captainMemberId) })); const unassigned = sortParticipants(participants?.filter(p => p.teamId == null) || [], participantSort)
-  const showScores = gameId => { if (scores[gameId] !== undefined) return; getPlayerScores(gameId).then(data => setScores(s => ({ ...s, [gameId]: data }))).catch(() => setScores(s => ({ ...s, [gameId]: null }))) }
+  const toggleScores = gameId => {
+    setExpandedScoreGameIds(current => {
+      const next = new Set(current)
+      if (next.has(gameId)) next.delete(gameId)
+      else next.add(gameId)
+      return next
+    })
+    if (scores[gameId] !== undefined) return
+    getPlayerScores(gameId).then(data => setScores(s => ({ ...s, [gameId]: data }))).catch(() => setScores(s => ({ ...s, [gameId]: null })))
+  }
   const toggleAttendance = date => { const cacheKey = `${id}:${date}`; if (expandedAttendance === cacheKey) { setExpandedAttendance(null); return } setExpandedAttendance(cacheKey); if (attendanceDetails[cacheKey] !== undefined) return; getLeagueAttendance(id, date).then(data => setAttendanceDetails(current => ({ ...current, [cacheKey]: data }))).catch(() => setAttendanceDetails(current => ({ ...current, [cacheKey]: null }))) }
   if (error) return <><PageTitle title="리그 상세" back /><ErrorMessage text={error} /></>; if (!league || !tab) return <><PageTitle title="리그 상세" back /><Loading /></>
   const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
@@ -175,7 +184,7 @@ export default function LeagueDetailPage() {
       ? games === null ? <Loading /> : games.length === 0 ? <EmptyState text="등록된 경기가 없습니다." /> : <div className="game-list">{groupGamesByDate(games).map(group => <article className="card game-day-card" key={group.date}>
         <div className="game-day-head"><h3>{formatDate(group.date)}</h3><span className={`game-status ${dateStatus(group.games) === '종료' ? '' : 'scheduled'}`}>{dateStatus(group.games)}</span></div>
         <div className="game-day-rows">{group.games.map(game => {
-          const expanded = scores[game.gameId]
+          const expanded = expandedScoreGameIds.has(game.gameId) ? scores[game.gameId] : null
           const homeWon = isWinner(game, game.homeTeam.id)
           const awayWon = isWinner(game, game.awayTeam.id)
           const winnerName = homeWon ? game.homeTeam.name : awayWon ? game.awayTeam.name : null
@@ -187,7 +196,7 @@ export default function LeagueDetailPage() {
             </div><span className={`game-row-status ${game.status === 'COMPLETED' ? '' : 'scheduled'}`}>{game.status === 'COMPLETED' ? '종료' : '예정'}</span></div>
             {game.resultType === 'FORFEIT' && winnerName && <p className="game-result-note">몰수 · {winnerName} 승</p>}
             {game.resultType === 'TIEBREAK' && winnerName && <p className="game-result-note">동점 후 승부결정 · {winnerName} 승</p>}
-            {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={Boolean(expanded)} onClick={() => showScores(game.gameId)}>개인 득점 보기 <span aria-hidden="true">{expanded ? '▲' : '›'}</span></button>}
+            {game.status === 'COMPLETED' && <button type="button" className="score-toggle" aria-expanded={expandedScoreGameIds.has(game.gameId)} onClick={() => toggleScores(game.gameId)}>개인 득점 보기 <span aria-hidden="true">{expandedScoreGameIds.has(game.gameId) ? '^' : '>'}</span></button>}
             {expanded && <div className="score-details">{expanded.teams.map(team => <div className="score-team" key={team.teamId}><h4>{team.teamName}</h4>{team.players.filter(p => p.hasScore).map(p => <p key={p.leagueMemberId}><b>{p.name}</b><span>{p.points}점</span></p>)}{team.players.every(p => !p.hasScore) && <p className="muted">개인 득점 기록이 아직 입력되지 않았습니다.</p>}</div>)}</div>}
           </section>
         })}</div>
