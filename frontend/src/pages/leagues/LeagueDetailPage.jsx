@@ -9,14 +9,16 @@ import { getLeagueAttendance, getLeagueAttendanceRates, getLeagueAttendanceSumma
 import StandingsList from '../../components/StandingsList'
 import LeagueStatusBadge from '../../components/LeagueStatusBadge'
 import WinImpactList from '../../components/WinImpactList'
+import WinningCombinations from '../../components/WinningCombinations'
+import AttendanceRanking from '../../components/AttendanceRanking'
 import '../../styles/game-list.css'
 import '../../styles/winner.css'
 import '../../styles/standings.css'
 import '../../styles/win-impact.css'
+import '../../styles/league-tabs.css'
 
-const activeTabs = [['standings', '팀 순위'], ['games', '경기'], ['scorers', '개인 득점'], ['win-impact', '승리기여도'], ['participants', '팀/참가자']]
-const completedTabs = [['winner', '우승팀'], ['standings', '최종 순위'], ['games', '경기 결과'], ['scorers', '개인 득점'], ['win-impact', '승리기여도'], ['participants', '팀/참가자']]
-const allTabs = [...new Set([...activeTabs, ...completedTabs].map(([key]) => key))]
+const leagueTabs = [['standings', '팀 순위'], ['games', '경기'], ['win-impact', '승리기여도'], ['winning-combinations', '필승조합'], ['participants', '팀 명단'], ['attendance-ranking', '출석왕']]
+const allTabs = [...leagueTabs.map(([key]) => key), 'scorers', 'winner']
 const formatDate = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정'
 const isWinner = (game, teamId) => {
   if (game.status !== 'COMPLETED') return false
@@ -147,13 +149,15 @@ export default function LeagueDetailPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
   const [winImpact, setWinImpact] = useState(null)
+  const [attendanceRanking, setAttendanceRanking] = useState(null)
   const { id } = useParams(); const [searchParams, setSearchParams] = useSearchParams(); const requestedTab = searchParams.get('tab'); const [league, setLeague] = useState(null); const [standings, setStandings] = useState(null); const [scorers, setScorers] = useState(null); const [winner, setWinner] = useState(undefined); const [participants, setParticipants] = useState(null); const [teams, setTeams] = useState([]); const [games, setGames] = useState(null); const [attendanceSummary, setAttendanceSummary] = useState({}); const [attendanceDetails, setAttendanceDetails] = useState({}); const [expandedAttendance, setExpandedAttendance] = useState(null); const [scores, setScores] = useState({}); const [expandedScoreGameIds, setExpandedScoreGameIds] = useState(() => new Set()); const [participantSort, setParticipantSort] = useState('rate'); const [tab, setTab] = useState(allTabs.includes(requestedTab) ? requestedTab : null); const [error, setError] = useState('')
-  useEffect(() => { getLeague(id).then(data => { const availableTabs = data.status === 'COMPLETED' ? completedTabs : activeTabs; const defaultTab = data.status === 'COMPLETED' ? 'winner' : 'standings'; setLeague(data); setTab(current => availableTabs.some(([key]) => key === current) ? current : defaultTab) }).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id])
+  useEffect(() => { getLeague(id).then(data => { setLeague(data); setTab(current => allTabs.includes(current) ? current : 'standings') }).catch(() => setError('정보를 불러오지 못했습니다.')) }, [id])
   useEffect(() => {
     if (tab === 'standings') getLeagueStandings(id).then(data => setStandings(data.standings)).catch(() => setError('순위 정보를 불러오지 못했습니다.'))
     if (tab === 'scorers') getLeagueScorers(id).then(data => setScorers(data.scorers)).catch(() => setError('개인 득점 순위를 불러오지 못했습니다.'))
     if (tab === 'winner') getLeagueWinner(id).then(data => setWinner(data.winner)).catch(() => setError('우승팀 정보를 불러오지 못했습니다.'))
     if (tab === 'win-impact') getLeagueWinImpact(id).then(setWinImpact).catch(() => setError('승리기여도 정보를 불러오지 못했습니다.'))
+    if (tab === 'attendance-ranking') getLeagueAttendanceRates(id).then(setAttendanceRanking).catch(() => setError('출석 순위를 불러오지 못했습니다.'))
     if (tab === 'participants') Promise.all([getLeagueAttendanceRates(id), getLeagueTeams(id)])
       .then(([attendanceData, teamData]) => { setParticipants(attendanceData.participants); setTeams(teamData) })
       .catch(() => setError('참가자 정보를 불러오지 못했습니다.'))
@@ -174,12 +178,16 @@ export default function LeagueDetailPage() {
   }
   const toggleAttendance = date => { const cacheKey = `${id}:${date}`; if (expandedAttendance === cacheKey) { setExpandedAttendance(null); return } setExpandedAttendance(cacheKey); if (attendanceDetails[cacheKey] !== undefined) return; getLeagueAttendance(id, date).then(data => setAttendanceDetails(current => ({ ...current, [cacheKey]: data }))).catch(() => setAttendanceDetails(current => ({ ...current, [cacheKey]: null }))) }
   if (error) return <><PageTitle title="리그 상세" back /><ErrorMessage text={error} /></>; if (!league || !tab) return <><PageTitle title="리그 상세" back /><Loading /></>
-  const tabs = league.status === 'COMPLETED' ? completedTabs : activeTabs
+  const tabs = leagueTabs
   const selectTab = key => { setTab(key); setSearchParams({ tab: key }, { replace: true }) }
   const content = tab === 'win-impact'
     ? winImpact === null ? <Loading /> : <><div className="win-impact-heading"><small>WIN IMPACT</small><h2>{isAdmin ? '승리기여도(관리자 전체조회)' : '승리기여도 TOP7'}</h2><p>내가 참가한 경기의 팀 승률과<br />팀 평균 승률의 차이를 보여줍니다. (최소 6경기)<br /><strong className="win-impact-forfeit-note">몰수패/승 경기기록은 승률계산에서 제외됩니다.</strong></p></div><WinImpactList players={winImpact?.players} eligibleLimit={isAdmin ? undefined : 7} showInsufficient={isAdmin} /></>
-    : tab === 'standings'
-    ? standings === null ? <Loading /> : <StandingsList standings={standings} />
+    : tab === 'winning-combinations'
+      ? <WinningCombinations leagueId={id} admin={isAdmin} />
+      : tab === 'attendance-ranking'
+        ? attendanceRanking === null ? <Loading /> : <AttendanceRanking data={attendanceRanking} isAdmin={isAdmin} />
+        : tab === 'standings'
+          ? standings === null ? <Loading /> : <StandingsList standings={standings} />
     : tab === 'games'
       ? games === null ? <Loading /> : games.length === 0 ? <EmptyState text="등록된 경기가 없습니다." /> : <div className="game-list">{groupGamesByDate(games).map(group => <article className="card game-day-card" key={group.date}>
         <div className="game-day-head"><h3>{formatDate(group.date)}</h3><span className={`game-status ${dateStatus(group.games) === '종료' ? '' : 'scheduled'}`}>{dateStatus(group.games)}</span></div>

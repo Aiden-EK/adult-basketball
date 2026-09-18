@@ -4,9 +4,11 @@ import PageTitle from '../components/PageTitle'
 import WinningCombinations from '../components/WinningCombinations'
 import { ErrorMessage, Loading } from '../components/Status'
 import { getLeague } from '../services/leagueApi'
+import { useAuth } from '../auth/useAuth'
 
 export default function WinningCombinationsPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   const [state, setState] = useState(null)
   useEffect(() => {
     let cancelled = false
@@ -17,6 +19,6 @@ export default function WinningCombinationsPage() {
   const current = state?.id === id ? state : null
   return <>
     <PageTitle eyebrow="WINNING COMBINATIONS" title="필승조합" description={current?.league?.name} back />
-    {current?.error ? <ErrorMessage text={current.error} /> : !current ? <Loading /> : <WinningCombinations key={id} leagueId={id} />}
+    {current?.error ? <ErrorMessage text={current.error} /> : !current ? <Loading /> : <WinningCombinations key={id} leagueId={id} admin={user?.role === 'ADMIN'} />}
   </>
 }
