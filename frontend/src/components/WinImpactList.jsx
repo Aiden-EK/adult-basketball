@@ -5,7 +5,8 @@ const impact = value => value === null || value === undefined ? '비교 데이�
 const displayImpact = item => impact(item.winImpact)
 
 function TeamDetail({ team, playerName }) {
-  return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>{playerName} 참가</b> {team.participatedGames}경기 · {team.participatedWins}승 {team.participatedLosses}패 · {percent(team.participatedWinRate)}</span><span className="win-impact-participation"><b>팀 전체</b> {team.teamGames}경기 · {team.teamWins}승 {team.teamLosses}패 · {percent(team.teamWinRate)}</span><strong className="win-impact-team-comparison">팀 평균 대비 {displayImpact(team)}</strong></div></div>
+  const comparisonClass = team.winImpact > 0 ? 'positive' : team.winImpact < 0 ? 'negative' : 'neutral'
+  return <div className="win-impact-team"><b className="win-impact-team-name">{team.teamName}</b><div className="win-impact-team-lines"><span><b>{playerName} 참가</b> {team.participatedGames}경기 · {team.participatedWins}승 {team.participatedLosses}패 · {percent(team.participatedWinRate)}</span><span className="win-impact-participation"><b>팀 전체</b> {team.teamGames}경기 · {team.teamWins}승 {team.teamLosses}패 · {percent(team.teamWinRate)}</span><strong className={`win-impact-team-comparison ${comparisonClass}`}>팀 평균 대비 {displayImpact(team)}</strong></div></div>
 }
 
 export default function WinImpactList({ players, eligibleLimit, showInsufficient = true }) {
